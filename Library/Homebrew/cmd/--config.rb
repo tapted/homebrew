@@ -54,6 +54,13 @@ module Homebrew extend self
     if head.empty? then "(none)" else head end
   end
 
+  def origin
+    origin = HOMEBREW_REPOSITORY.cd do
+      `git config --get remote.origin.url`.chomp
+    end
+    if origin.empty? then "(none)" else origin end
+  end
+
   def describe_path path
     return "N/A" if path.nil?
     realpath = path.realpath
@@ -78,7 +85,7 @@ module Homebrew extend self
   end
 
   def hardware
-    "CPU: #{Hardware.cores_as_words}-core #{Hardware.bits}-bit #{Hardware.intel_family}"
+    "CPU: #{Hardware.cores_as_words}-core #{Hardware::CPU.bits}-bit #{Hardware::CPU.family}"
   end
 
   def kernel
@@ -124,6 +131,7 @@ module Homebrew extend self
 
   def dump_verbose_config
     puts "HOMEBREW_VERSION: #{HOMEBREW_VERSION}"
+    puts "ORIGIN: #{origin}"
     puts "HEAD: #{head}"
     puts "HOMEBREW_PREFIX: #{HOMEBREW_PREFIX}"
     puts "HOMEBREW_CELLAR: #{HOMEBREW_CELLAR}"
