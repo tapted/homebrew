@@ -21,9 +21,16 @@ class Squid < Formula
   depends_on NoBdb5
 
   def install
-    system "./configure", "--disable-debug", "--disable-dependency-tracking",
-                          "--prefix=#{prefix}",
-                          "--localstatedir=#{var}"
+    args =%W[
+      --disable-debug
+      --disable-dependency-tracking
+      --prefix=#{prefix}
+      --localstatedir=#{var}
+      --enable-ssl
+      --enable-ssl-crtd
+    ]
+
+    system "./configure", *args
     system "make install"
   end
 
@@ -45,8 +52,6 @@ class Squid < Formula
       </array>
       <key>RunAtLoad</key>
       <true/>
-      <key>UserName</key>
-      <string>#{`whoami`.chomp}</string>
       <key>WorkingDirectory</key>
       <string>#{var}</string>
     </dict>

@@ -1,8 +1,8 @@
 require 'formula'
 
 class Distribute < Formula
-  url 'https://pypi.python.org/packages/source/d/distribute/distribute-0.6.35.tar.gz'
-  sha1 'a928104ea1bd1f85c35de6d0d5f1628d2602ac66'
+  url 'https://pypi.python.org/packages/source/d/distribute/distribute-0.6.38.tar.gz'
+  sha1 'dcd9d17db4e2df132f5c9c2e88c52d57ff6ff541'
 end
 
 class Pip < Formula
@@ -12,14 +12,15 @@ end
 
 class Python < Formula
   homepage 'http://www.python.org'
-  url 'http://www.python.org/ftp/python/2.7.3/Python-2.7.3.tar.bz2'
-  sha1 '842c4e2aff3f016feea3c6e992c7fa96e49c9aa0'
+  url 'http://www.python.org/ftp/python/2.7.4/Python-2.7.4.tar.bz2'
+  sha1 'deb8609d8e356b3388f33b6a4d6526911994e5b1'
 
   option :universal
   option 'quicktest', 'Run `make quicktest` after the build (for devs; may fail)'
   option 'with-brewed-openssl', "Use Homebrew's openSSL instead of the one from OS X"
   option 'with-brewed-tk', "Use Homebrew's Tk (has optional Cocoa and threads support)"
   option 'with-poll', 'Enable select.poll, which is not fully implemented on OS X (http://bugs.python.org/issue5154)'
+
   # --with-dtrace relies on CLT as dtrace hard-codes paths to /usr
   option 'with-dtrace', 'Experimental DTrace support (http://bugs.python.org/issue13405)' if MacOS::CLT.installed?
 
@@ -32,10 +33,7 @@ class Python < Formula
 
   def patches
     p = []
-    # python fails to build on NFS; patch is merged upstream, will be in next release
-    # see http://bugs.python.org/issue14662
-    p << "https://gist.github.com/raw/4349132/25662c6b382315b5db67bf949773d76471bbcee7/python-nfs-shutil.diff"
-    p << 'https://raw.github.com/gist/3415636/2365dea8dc5415daa0148e98c394345e1191e4aa/pythondtrace-patch.diff' if build.include? 'with-dtrace'
+    p << 'https://gist.github.com/paxswill/5402840/raw/75646d5860685c8be98858288d1772f64d6d5193/pythondtrace-patch.diff' if build.include? 'with-dtrace'
     # Patch to disable the search for Tk.frameworked, since homebrew's Tk is
     # a plain unix build. Remove `-lX11`, too because our Tk is "AquaTk".
     p << DATA if build.include? 'with-brewed-tk'
@@ -141,7 +139,8 @@ class Python < Formula
 
           # Fix 2)
           #   Remove brewed Python's hard-coded site-packages
-          sys.path.remove('#{site_packages_cellar}')
+          if '#{site_packages_cellar}' in sys.path:
+              sys.path.remove('#{site_packages_cellar}')
 
       # Fix 3)
       #   For all Pythons: Tell about homebrew's site-packages location.
@@ -275,21 +274,22 @@ end
 
 __END__
 diff --git a/setup.py b/setup.py
-index 6b47451..36bc81d 100644
+index ea8a5f5..0a001f9 100644
 --- a/setup.py
 +++ b/setup.py
-@@ -1702,9 +1702,6 @@ class PyBuildExt(build_ext):
+@@ -1809,9 +1809,7 @@ class PyBuildExt(build_ext):
+         # Rather than complicate the code below, detecting and building
          # AquaTk is a separate method. Only one Tkinter will be built on
          # Darwin - either AquaTk, if it is found, or X11 based Tk.
-         platform = self.get_platform()
--        if (platform == 'darwin' and
+-        if (host_platform == 'darwin' and
 -            self.detect_tkinter_darwin(inc_dirs, lib_dirs)):
 -            return
++
  
          # Assume we haven't found any of the libraries or include files
          # The versions with dots are used on Unix, and the versions without
-@@ -1754,17 +1751,6 @@ class PyBuildExt(build_ext):
-         if platform == 'sunos5':
+@@ -1861,17 +1859,7 @@ class PyBuildExt(build_ext):
+         if host_platform == 'sunos5':
              include_dirs.append('/usr/openwin/include')
              added_lib_dirs.append('/usr/openwin/lib')
 -        elif os.path.exists('/usr/X11R6/include'):
@@ -303,17 +303,18 @@ index 6b47451..36bc81d 100644
 -            # Assume default location for X11
 -            include_dirs.append('/usr/X11/include')
 -            added_lib_dirs.append('/usr/X11/lib')
++
  
          # If Cygwin, then verify that X is installed before proceeding
-         if platform == 'cygwin':
-@@ -1790,8 +1776,8 @@ class PyBuildExt(build_ext):
+         if host_platform == 'cygwin':
+@@ -1897,8 +1885,8 @@ class PyBuildExt(build_ext):
              libs.append('ld')
  
          # Finally, link with the X11 libraries (not appropriate on cygwin)
--        if platform != "cygwin":
+-        if host_platform != "cygwin":
 -            libs.append('X11')
-+        # if platform != "cygwin":
-+            # libs.append('X11')
++        # if host_platform != "cygwin":
++        #     libs.append('X11')
  
          ext = Extension('_tkinter', ['_tkinter.c', 'tkappinit.c'],
                          define_macros=[('WITH_APPINIT', 1)] + defs,

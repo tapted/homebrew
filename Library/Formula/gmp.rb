@@ -8,9 +8,9 @@ class Gmp < Formula
 
   bottle do
     cellar :any
-    sha1 '6205bbef609caa99f3c52504139124dff58e3ada' => :mountain_lion
-    sha1 '1e149d107deaa26b701abd191a409df06c8fbea0' => :lion
-    sha1 '9eeb70ae6cb596ceb649d5ad313e35b1efdde3fd' => :snow_leopard
+    sha1 'f405e9d565890441dbccd62955a0bd168f98b86d' => :mountain_lion
+    sha1 '80a8c65afd5cea11c96b63226414a03890748051' => :lion
+    sha1 'e6fe1b5e9a74b3ad3979701a9b449838692b7cab' => :snow_leopard
   end
 
   option '32-bit'

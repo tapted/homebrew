@@ -182,7 +182,17 @@ class << ENV
 
   def determine_cccfg
     s = ""
-    s << 'b' if ARGV.build_bottle?
+    if ARGV.build_bottle?
+      s << if Hardware::CPU.type == :intel
+        if Hardware::CPU.is_64_bit?
+          'bi6'
+        else
+          'bi'
+        end
+      else
+        'b'
+      end
+    end
     # Fix issue with sed barfing on unicode characters on Mountain Lion
     s << 's' if MacOS.version >= :mountain_lion
     # Fix issue with 10.8 apr-1-config having broken paths
@@ -246,6 +256,7 @@ class << ENV
   # This should be a safe hack to prevent that exception cropping up.
   # Main consqeuence of this is that ENV['CFLAGS'] is never nil even when it
   # is which can break if checks, but we don't do such a check in our code.
+  alias_method :"old_[]", :[]
   def [] key
     if has_key? key
       fetch(key)
