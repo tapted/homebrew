@@ -2,10 +2,10 @@ require 'formula'
 
 class Qemu < Formula
   homepage 'http://www.qemu.org/'
-  url 'http://wiki.qemu-project.org/download/qemu-1.4.1.tar.bz2'
-  sha1 '7228efc39436aa76fd0317efec49439dee542b8a'
+  url 'http://wiki.qemu-project.org/download/qemu-1.6.0.tar.bz2'
+  sha1 '5f754fc128aaafd0c7aee2204d453f4be1ac859e'
 
-  head 'git://git.qemu-project.org/qemu.git', :using => :git
+  head 'git://git.qemu-project.org/qemu.git'
 
   depends_on 'pkg-config' => :build
   depends_on :libtool

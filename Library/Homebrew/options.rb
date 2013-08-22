@@ -15,20 +15,20 @@ class Option
   end
   alias_method :to_str, :to_s
 
-  def to_json
-    flag.inspect
-  end
-
   def <=>(other)
     name <=> other.name
   end
 
   def eql?(other)
-    other.is_a?(self.class) && hash == other.hash
+    instance_of?(other.class) && name == other.name
   end
 
   def hash
     name.hash
+  end
+
+  def inspect
+    "#<#{self.class}: #{flag.inspect}>"
   end
 
   private
@@ -100,6 +100,10 @@ class Options
     @options.to_a
   end
   alias_method :to_ary, :to_a
+
+  def inspect
+    "#<#{self.class}: #{to_a.inspect}>"
+  end
 
   def self.coerce(arg)
     case arg

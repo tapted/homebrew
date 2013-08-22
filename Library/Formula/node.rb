@@ -1,15 +1,5 @@
 require 'formula'
 
-class PythonVersion < Requirement
-  env :userpaths
-
-  satisfy { `python -c 'import sys;print(sys.version[:3])'`.strip.to_f >= 2.6 }
-
-  def message
-    "Node's build system, gyp, requires Python 2.6 or newer."
-  end
-end
-
 class NpmNotInstalled < Requirement
   fatal true
 
@@ -39,14 +29,15 @@ class NpmNotInstalled < Requirement
   end
 end
 
+# Note that x.even are stable releases, x.odd are devel releases
 class Node < Formula
   homepage 'http://nodejs.org/'
-  url 'http://nodejs.org/dist/v0.10.5/node-v0.10.5.tar.gz'
-  sha1 '99b92864f4a277debecb4c872ea7202c9aa6996f'
+  url 'http://nodejs.org/dist/v0.10.16/node-v0.10.16.tar.gz'
+  sha1 '646fd7ce38091ec9bd0c5d080a9da522edaabff7'
 
   devel do
-    url 'http://nodejs.org/dist/v0.11.1/node-v0.11.1.tar.gz'
-    sha1 'fe13c36f4d9116ed718af9894aab989d74a9d91c'
+    url 'http://nodejs.org/dist/v0.11.5/node-v0.11.5.tar.gz'
+    sha1 '5cd49ac41bb6929a43aaf77037d051fe794e5ad3'
   end
 
   head 'https://github.com/joyent/node.git'
@@ -55,7 +46,7 @@ class Node < Formula
   option 'without-npm', 'npm will not be installed'
 
   depends_on NpmNotInstalled unless build.without? 'npm'
-  depends_on PythonVersion
+  depends_on :python => ["2.6", :build]
 
   fails_with :llvm do
     build 2326
@@ -79,35 +70,24 @@ class Node < Formula
   end
 
   def npm_prefix
-    "#{HOMEBREW_PREFIX}/share/npm"
-  end
-
-  def npm_bin
-    "#{npm_prefix}/bin"
-  end
-
-  def modules_folder
-    "#{HOMEBREW_PREFIX}/lib/node_modules"
+    d = "#{HOMEBREW_PREFIX}/share/npm"
+    if File.directory? d
+      d
+    else
+      HOMEBREW_PREFIX.to_s
+    end
   end
 
   def caveats
-    if build.include? 'without-npm'
-      <<-EOS.undent
-        Homebrew has NOT installed npm. We recommend the following method of
-        installation:
-          curl https://npmjs.org/install.sh | sh
-
-        After installing, add the following path to your NODE_PATH environment
-        variable to have npm libraries picked up:
-          #{modules_folder}
-      EOS
-    elsif not ENV['PATH'].split(':').include? npm_bin
-      <<-EOS.undent
-        Homebrew installed npm.
-        We recommend prepending the following path to your PATH environment
-        variable to have npm-installed binaries picked up:
-          #{npm_bin}
-      EOS
+    if build.include? 'without-npm' then <<-end.undent
+      Homebrew has NOT installed npm. If you later install it, you should supplement
+      your NODE_PATH with the npm module folder:
+          #{npm_prefix}/lib/node_modules
+      end
+    elsif not ENV['PATH'].split(':').include? "#{npm_prefix}/bin"; <<-end.undent
+      Probably you should amend your PATH to include npm-installed binaries:
+          #{npm_prefix}/bin
+      end
     end
   end
 end

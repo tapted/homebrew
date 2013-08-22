@@ -2,8 +2,8 @@ require 'formula'
 
 class Chruby < Formula
   homepage 'https://github.com/postmodern/chruby#readme'
-  url 'https://github.com/postmodern/chruby/archive/v0.3.4.tar.gz'
-  sha1 '28445cd75f514b299f6b2f2bf123793d8739a99b'
+  url 'https://github.com/postmodern/chruby/archive/v0.3.7.tar.gz'
+  sha1 '237903096f874f40749520d267fe35e2e3222bb3'
 
   head 'https://github.com/postmodern/chruby.git'
 
@@ -12,8 +12,7 @@ class Chruby < Formula
   end
 
   def caveats; <<-EOS.undent
-    Add the following to the /etc/profile.d/chruby.sh, ~/.bash_profile or
-    ~/.zprofile file:
+    Add the following to the ~/.bashrc or ~/.zshrc file:
 
       source #{HOMEBREW_PREFIX}/opt/chruby/share/chruby/chruby.sh
 
@@ -30,9 +29,10 @@ class Chruby < Formula
 
       RVM:   RUBIES=(~/.rvm/rubies/*)
       rbenv: RUBIES=(~/.rbenv/versions/*)
-      rbfu:  RUBIES=('~/.rbfu/rubies/*)
+      rbfu:  RUBIES=(~/.rbfu/rubies/*)
 
-    To enable auto-switching of Rubies specified by .ruby-version files:
+    To enable auto-switching of Rubies specified by .ruby-version files,
+    add the following to ~/.bashrc or ~/.zshrc:
 
       source #{HOMEBREW_PREFIX}/opt/chruby/share/chruby/auto.sh
     EOS
