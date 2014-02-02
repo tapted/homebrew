@@ -1,5 +1,6 @@
 # encoding: UTF-8
 
+require 'cxxstdlib'
 require 'exceptions'
 require 'formula'
 require 'keg'
@@ -8,29 +9,36 @@ require 'bottles'
 require 'caveats'
 require 'cleaner'
 require 'formula_cellar_checks'
+require 'install_renamed'
 
 class FormulaInstaller
   include FormulaCellarChecks
 
   attr_reader :f
-  attr_accessor :tab, :options, :ignore_deps
+  attr_accessor :tab, :options, :ignore_deps, :only_deps
   attr_accessor :show_summary_heading, :show_header
 
   def initialize ff
     @f = ff
     @show_header = false
     @ignore_deps = ARGV.ignore_deps? || ARGV.interactive?
+    @only_deps = ARGV.only_deps?
     @options = Options.new
     @tab = Tab.dummy_tab(ff)
 
     @@attempted ||= Set.new
 
+    @poured_bottle = false
+    @pour_failed   = false
+
     lock
     check_install_sanity
   end
 
-  def pour_bottle? warn=false
-    tab.used_options.empty? && options.empty? && install_bottle?(f, warn)
+  def pour_bottle? install_bottle_options={:warn=>false}
+    return false if @pour_failed
+    tab.used_options.empty? && options.empty? && \
+      install_bottle?(f, install_bottle_options)
   end
 
   def check_install_sanity
@@ -38,7 +46,7 @@ class FormulaInstaller
 
     if f.installed?
       msg = "#{f}-#{f.installed_version} already installed"
-      msg << ", it's just not linked" if not f.linked_keg.symlink? and not f.keg_only?
+      msg << ", it's just not linked" unless f.linked_keg.symlink? or f.keg_only?
       raise FormulaAlreadyInstalledError, msg
     end
 
@@ -70,6 +78,18 @@ class FormulaInstaller
     raise
   end
 
+  def build_bottle_preinstall
+    @etc_var_glob ||= "#{HOMEBREW_PREFIX}/{etc,var}/**/*"
+    @etc_var_preinstall = Dir[@etc_var_glob]
+  end
+
+  def build_bottle_postinstall
+    @etc_var_postinstall = Dir[@etc_var_glob]
+    (@etc_var_postinstall - @etc_var_preinstall).each do |file|
+      Pathname.new(file).cp_path_sub(HOMEBREW_PREFIX, f.bottle_prefix)
+    end
+  end
+
   def install
     # not in initialize so upgrade can unlink the active keg before calling this
     # function but after instantiating this class so that it can avoid having to
@@ -84,37 +104,53 @@ class FormulaInstaller
 
     check_conflicts
 
-    unless ignore_deps
-      perform_readline_hack
-      check_requirements
-      install_dependencies
+    compute_and_install_dependencies unless ignore_deps
+
+    return if only_deps
+
+    if ARGV.build_bottle? && (arch = ARGV.bottle_arch) && !Hardware::CPU.optimization_flags.include?(arch)
+      raise "Unrecognized architecture for --bottle-arch: #{arch}"
     end
 
     oh1 "Installing #{Tty.green}#{f}#{Tty.reset}" if show_header
 
     @@attempted << f
 
-    @poured_bottle = false
     begin
-      if pour_bottle? true
+      if pour_bottle? :warn => true
         pour
         @poured_bottle = true
+
+        stdlibs = Keg.new(f.prefix).detect_cxx_stdlibs
+        stdlib_in_use = CxxStdlib.new(stdlibs.first, MacOS.default_compiler)
+        begin
+          stdlib_in_use.check_dependencies(f, f.recursive_dependencies)
+        rescue IncompatibleCxxStdlibs => e
+          opoo e.message
+        end
+
+        stdlibs = Keg.new(f.prefix).detect_cxx_stdlibs :skip_executables => true
         tab = Tab.for_keg f.prefix
         tab.poured_from_bottle = true
-        tab.tabfile.delete rescue nil
+        tab.tabfile.delete if tab.tabfile
         tab.write
       end
-    rescue
-      raise if ARGV.homebrew_developer?
+    rescue => e
+      raise e if ARGV.homebrew_developer?
+      @pour_failed = true
+      onoe e.message
       opoo "Bottle installation failed: building from source."
     end
 
+    build_bottle_preinstall if ARGV.build_bottle?
+
     unless @poured_bottle
+      compute_and_install_dependencies if @pour_failed and not ignore_deps
       build
       clean
     end
 
-    f.post_install
+    build_bottle_postinstall if ARGV.build_bottle?
 
     opoo "Nothing was installed to #{f.prefix}" unless f.installed?
   end
@@ -138,46 +174,76 @@ class FormulaInstaller
     raise FormulaConflictError.new(f, conflicts) unless conflicts.empty?
   end
 
-  def check_requirements
-    unsatisfied = ARGV.filter_for_dependencies do
-      f.recursive_requirements do |dependent, req|
-        if (req.optional? || req.recommended?) && dependent.build.without?(req.name)
-          Requirement.prune
-        elsif req.build? && install_bottle?(dependent)
-          Requirement.prune
-        elsif req.satisfied?
-          Requirement.prune
-        elsif req.default_formula?
-          dependent.deps << req.to_dependency
-          Requirement.prune
-        else
-          puts "#{dependent}: #{req.message}"
+  def compute_and_install_dependencies
+    perform_readline_hack
+
+    req_map, req_deps = expand_requirements
+
+    check_requirements(req_map)
+
+    deps = [].concat(req_deps).concat(f.deps)
+    deps = expand_dependencies(deps)
+
+    if deps.empty? and only_deps
+      puts "All dependencies for #{f} are satisfied."
+    else
+      install_dependencies(deps)
+    end
+  end
+
+  def check_requirements(req_map)
+    fatals = []
+
+    req_map.each_pair do |dependent, reqs|
+      reqs.each do |req|
+        puts "#{dependent}: #{req.message}"
+        fatals << req if req.fatal?
+      end
+    end
+
+    raise UnsatisfiedRequirements.new(f, fatals) unless fatals.empty?
+  end
+
+  def expand_requirements
+    unsatisfied_reqs = Hash.new { |h, k| h[k] = [] }
+    deps = []
+    formulae = [f]
+
+    while f = formulae.pop
+
+      ARGV.filter_for_dependencies do
+        f.recursive_requirements do |dependent, req|
+          if (req.optional? || req.recommended?) && dependent.build.without?(req)
+            Requirement.prune
+          elsif req.build? && install_bottle?(dependent)
+            Requirement.prune
+          elsif req.satisfied?
+            Requirement.prune
+          elsif req.default_formula?
+            dep = req.to_dependency
+            deps.unshift(dep)
+            formulae.unshift(dep.to_formula)
+            Requirement.prune
+          else
+            unsatisfied_reqs[dependent] << req
+          end
         end
       end
     end
 
-    fatals = unsatisfied.select(&:fatal?)
-    raise UnsatisfiedRequirements.new(f, fatals) unless fatals.empty?
+    return unsatisfied_reqs, deps
   end
 
-  # Dependencies of f that were also explicitly requested on the command line.
-  # These honor options like --HEAD and --devel.
-  def requested_deps
-    f.recursive_dependencies.select { |dep| dep.requested? && !dep.installed? }
-  end
-
-  # All dependencies that we must install before installing f.
-  # These do not honor flags like --HEAD and --devel.
-  def necessary_deps
+  def expand_dependencies(deps)
     # FIXME: can't check this inside the block for the top-level dependent
     # because it depends on the contents of ARGV.
     pour_bottle = pour_bottle?
 
     ARGV.filter_for_dependencies do
-      f.recursive_dependencies do |dependent, dep|
+      Dependency.expand(f, deps) do |dependent, dep|
         dep.universal! if f.build.universal? && !dep.build?
 
-        if (dep.optional? || dep.recommended?) && dependent.build.without?(dep.name)
+        if (dep.optional? || dep.recommended?) && dependent.build.without?(dep)
           Dependency.prune
         elsif dep.build? && dependent == f && pour_bottle
           Dependency.prune
@@ -192,25 +258,19 @@ class FormulaInstaller
     end
   end
 
-  # Combine requested_deps and necessary deps.
-  def filter_deps
-    deps = Set.new.merge(requested_deps).merge(necessary_deps)
-    f.recursive_dependencies.select { |d| deps.include? d }
-  end
+  def install_dependencies(deps)
+    if deps.length > 1
+      oh1 "Installing dependencies for #{f}: #{Tty.green}#{deps*", "}#{Tty.reset}"
+    end
 
-  def effective_deps
-    @effective_deps ||= filter_deps
-  end
-
-  def install_dependencies
-    effective_deps.each do |dep|
+    deps.each do |dep|
       if dep.requested?
        install_dependency(dep)
       else
         ARGV.filter_for_dependencies { install_dependency(dep) }
       end
     end
-    @show_header = true unless effective_deps.empty?
+    @show_header = true unless deps.empty?
   end
 
   def install_dependency dep
@@ -224,6 +284,7 @@ class FormulaInstaller
     fi.tab = dep_tab
     fi.options = dep_options
     fi.ignore_deps = true
+    fi.only_deps = false
     fi.show_header = false
     oh1 "Installing #{f} dependency: #{Tty.green}#{dep}#{Tty.reset}"
     outdated_keg.unlink if outdated_keg
@@ -236,7 +297,9 @@ class FormulaInstaller
   end
 
   def caveats
-    if (not f.keg_only?) and ARGV.homebrew_developer?
+    return if only_deps
+
+    if ARGV.homebrew_developer? and not f.keg_only?
       audit_bin
       audit_sbin
       audit_lib
@@ -253,6 +316,8 @@ class FormulaInstaller
   end
 
   def finish
+    return if only_deps
+
     ohai 'Finishing up' if ARGV.verbose?
 
     install_plist
@@ -268,17 +333,26 @@ class FormulaInstaller
       link
     end
 
-    fix_install_names
+    fix_install_names if OS.mac?
+
+    post_install
 
     ohai "Summary" if ARGV.verbose? or show_summary_heading
-    unless ENV['HOMEBREW_NO_EMOJI']
-      print "\xf0\x9f\x8d\xba  " if MacOS.version >= :lion
-    end
-    print "#{f.prefix}: #{f.prefix.abv}"
-    print ", built in #{pretty_duration build_time}" if build_time
-    puts
+    puts summary
   ensure
     unlock if hold_locks?
+  end
+
+  def emoji
+    ENV['HOMEBREW_INSTALL_BADGE'] || "\xf0\x9f\x8d\xba"
+  end
+
+  def summary
+    s = ""
+    s << "#{emoji}  " if MacOS.version >= :lion and not ENV['HOMEBREW_NO_EMOJI']
+    s << "#{f.prefix}: #{f.prefix.abv}"
+    s << ", built in #{pretty_duration build_time}" if build_time
+    s
   end
 
   def build_time
@@ -339,14 +413,13 @@ class FormulaInstaller
       write.close
       Process.wait
       data = read.read
+      read.close
       raise Marshal.load(data) unless data.nil? or data.empty?
       raise Interrupt if $?.exitstatus == 130
       raise "Suspicious installation failure" unless $?.success?
     end
 
     raise "Empty installation" if Dir["#{f.prefix}/*"].empty?
-
-    Tab.create(f, build_argv).write # INSTALL_RECEIPT.json
 
   rescue Exception
     ignore_interrupts do
@@ -392,17 +465,12 @@ class FormulaInstaller
   end
 
   def fix_install_names
-    Keg.new(f.prefix).fix_install_names
-    if @poured_bottle and f.bottle
-      old_prefix = f.bottle.prefix
-      new_prefix = HOMEBREW_PREFIX.to_s
-      old_cellar = f.bottle.cellar
-      new_cellar = HOMEBREW_CELLAR.to_s
+    keg = Keg.new(f.prefix)
+    keg.fix_install_names(:keg_only => f.keg_only?)
 
-      if old_prefix != new_prefix or old_cellar != new_cellar
-        Keg.new(f.prefix).relocate_install_names \
-          old_prefix, new_prefix, old_cellar, new_cellar
-      end
+    if @poured_bottle
+      keg.relocate_install_names Keg::PREFIX_PLACEHOLDER, HOMEBREW_PREFIX.to_s,
+        Keg::CELLAR_PLACEHOLDER, HOMEBREW_CELLAR.to_s, :keg_only => f.keg_only?
     end
   rescue Exception => e
     onoe "Failed to fix install names"
@@ -430,18 +498,33 @@ class FormulaInstaller
     @show_summary_heading = true
   end
 
+  def post_install
+    f.post_install
+  rescue Exception => e
+    opoo "The post-install step did not complete successfully"
+    puts "You can try again using `brew postinstall #{f.name}`"
+    ohai e, e.backtrace if ARGV.debug?
+    @show_summary_heading = true
+  end
+
   def pour
-    downloader = f.downloader
-    if downloader.local_bottle_path
-      downloader = LocalBottleDownloadStrategy.new f,
-                     downloader.local_bottle_path
+    if f.local_bottle_path
+      downloader = LocalBottleDownloadStrategy.new(f)
     else
+      downloader = f.downloader
       fetched = f.fetch
       f.verify_download_integrity fetched
     end
     HOMEBREW_CELLAR.cd do
       downloader.stage
     end
+
+    Dir["#{f.bottle_prefix}/{etc,var}/**/*"].each do |file|
+      path = Pathname.new(file)
+      path.extend(InstallRenamed)
+      path.cp_path_sub(f.bottle_prefix, HOMEBREW_PREFIX)
+    end
+    FileUtils.rm_rf f.bottle_prefix
   end
 
   ## checks
@@ -457,11 +540,13 @@ class FormulaInstaller
   def audit_bin
     print_check_output(check_PATH(f.bin)) unless f.keg_only?
     print_check_output(check_non_executables(f.bin))
+    print_check_output(check_generic_executables(f.bin))
   end
 
   def audit_sbin
     print_check_output(check_PATH(f.sbin)) unless f.keg_only?
     print_check_output(check_non_executables(f.sbin))
+    print_check_output(check_generic_executables(f.sbin))
   end
 
   def audit_lib
@@ -506,7 +591,7 @@ end
 
 class Formula
   def keg_only_text
-    s = "This formula is keg-only: so it was not symlinked into #{HOMEBREW_PREFIX}."
+    s = "This formula is keg-only, so it was not symlinked into #{HOMEBREW_PREFIX}."
     s << "\n\n#{keg_only_reason.to_s}"
     if lib.directory? or include.directory?
       s <<

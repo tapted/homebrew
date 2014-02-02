@@ -2,15 +2,15 @@ require 'formula'
 
 class Xctool < Formula
   homepage 'https://github.com/facebook/xctool'
-  url 'https://github.com/facebook/xctool/archive/v0.1.7.tar.gz'
-  sha1 'd835f1a34d7d11278664162d4361a0bb03941e5d'
+  url 'https://github.com/facebook/xctool/archive/v0.1.14.tar.gz'
+  sha1 '57e610081b781b19ec0c0f2ca81d897b708826f4'
   head 'https://github.com/facebook/xctool.git'
 
   depends_on :xcode
   depends_on :macos => :lion
 
   def install
-    system "./build.sh 'XT_INSTALL_ROOT=#{libexec}'"
+    system "./scripts/build.sh 'XT_INSTALL_ROOT=#{libexec}'"
     bin.install_symlink "#{libexec}/bin/xctool"
   end
 

@@ -1,23 +1,16 @@
 require 'formula'
 
-class SbclBootstrapBinaries < Formula
-  url 'http://downloads.sourceforge.net/project/sbcl/sbcl/1.1.0/sbcl-1.1.0-x86-64-darwin-binary.tar.bz2'
-  sha1 'ed2069e124027c43926728c48d604efbb4e33950'
-  version "1.1.0"
-end
-
 class Sbcl < Formula
   homepage 'http://www.sbcl.org/'
-  url 'http://downloads.sourceforge.net/project/sbcl/sbcl/1.1.10/sbcl-1.1.10-source.tar.bz2'
-  sha1 '3a7706423ad25c0728f370f1373ad009fd96b1cf'
+  url 'http://downloads.sourceforge.net/project/sbcl/sbcl/1.1.14/sbcl-1.1.14-source.tar.bz2'
+  sha1 'c6b855f1dc5750de4057a7cabb35750986db3825'
 
   head 'git://sbcl.git.sourceforge.net/gitroot/sbcl/sbcl.git'
 
   bottle do
-    revision 1
-    sha1 'd4f3742a810f09e5f437e50d1533422692c7c906' => :mountain_lion
-    sha1 'aa66de57770e0dc700682bcf77c8911f819827f4' => :lion
-    sha1 '16b2302073a9d5b7dbb394e091bb242a78f2bb3f' => :snow_leopard
+    sha1 '31436d55e803f7bb6a420179d202a608d0f51b1f' => :mavericks
+    sha1 '4b87f08e4d89965a1c48d0a5a280e440b0281039' => :mountain_lion
+    sha1 '4631c87e3b50df6b919564f6f028ef033d0144af' => :lion
   end
 
   fails_with :llvm do
@@ -29,6 +22,11 @@ class Sbcl < Formula
   option "without-threads", "Build SBCL without support for native threads"
   option "with-ldb", "Include low-level debugger in the build"
   option "with-internal-xref", "Include XREF information for SBCL internals (increases core size by 5-6MB)"
+
+  resource 'bootstrap' do
+    url 'http://downloads.sourceforge.net/project/sbcl/sbcl/1.1.0/sbcl-1.1.0-x86-64-darwin-binary.tar.bz2'
+    sha1 'ed2069e124027c43926728c48d604efbb4e33950'
+  end
 
   def patches
     { :p0 => [
@@ -63,7 +61,7 @@ class Sbcl < Formula
       value =~ /[\x80-\xff]/n
     end
 
-    SbclBootstrapBinaries.new.brew do
+    resource('bootstrap').stage do
       # We only need the binaries for bootstrapping, so don't install anything:
       command = Dir.pwd + "/src/runtime/sbcl"
       core = Dir.pwd + "/output/sbcl.core"

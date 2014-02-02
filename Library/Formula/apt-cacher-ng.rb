@@ -2,12 +2,13 @@ require 'formula'
 
 class AptCacherNg < Formula
   homepage 'http://www.unix-ag.uni-kl.de/~bloch/acng/'
-  url 'http://ftp.debian.org/debian/pool/main/a/apt-cacher-ng/apt-cacher-ng_0.7.13.orig.tar.xz'
-  sha1 'bb6c3cf8e116ed9800543b7864a3a7b406aa4d5a'
+  url 'http://ftp.debian.org/debian/pool/main/a/apt-cacher-ng/apt-cacher-ng_0.7.25.orig.tar.xz'
+  sha1 'b4a3330be383af3b4edffc89641904908e2934de'
 
   depends_on 'xz' => :build
   depends_on 'cmake' => :build
-  depends_on 'fuse4x' => :build
+  depends_on 'osxfuse' => :build
+  depends_on 'boost' => :build
 
   def install
     system 'make apt-cacher-ng'
@@ -22,6 +23,7 @@ class AptCacherNg < Formula
 
     # create the cache directory
     (var/'spool/apt-cacher-ng').mkpath
+    (var/'log').mkpath
 
     sbin.install 'build/apt-cacher-ng'
     man8.install 'doc/man/apt-cacher-ng.8'
@@ -53,4 +55,5 @@ class AptCacherNg < Formula
     </plist>
     EOS
   end
+
 end

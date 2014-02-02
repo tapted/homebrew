@@ -102,6 +102,10 @@ module HomebrewArgvExtension
     include? '--ignore-dependencies'
   end
 
+  def only_deps?
+    include? '--only-dependencies'
+  end
+
   def json
     value 'json'
   end
@@ -133,6 +137,11 @@ module HomebrewArgvExtension
     include? '--build-bottle' or !ENV['HOMEBREW_BUILD_BOTTLE'].nil?
   end
 
+  def bottle_arch
+    arch = value 'bottle-arch'
+    arch.to_sym if arch
+  end
+
   def build_from_source?
     include? '--build-from-source' or !ENV['HOMEBREW_BUILD_FROM_SOURCE'].nil? \
       or build_head? or build_devel? or build_universal? or build_bottle?
@@ -142,6 +151,10 @@ module HomebrewArgvExtension
     options_only.any? do |arg|
       arg == flag || arg[1..1] != '-' && arg.include?(flag[2..2])
     end
+  end
+
+  def force_bottle?
+    include? '--force-bottle'
   end
 
   # eg. `foo -ns -i --bar` has three switches, n, s and i
@@ -176,6 +189,10 @@ module HomebrewArgvExtension
     yield
   ensure
     replace(old_args)
+  end
+
+  def cc
+    value 'cc'
   end
 
   private

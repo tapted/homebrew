@@ -4,6 +4,12 @@ require 'utils'
 require 'utils/json'
 
 module Homebrew extend self
+
+  # A regular expession to capture the username (one or more char but no `/`,
+  # which has to be escaped like `\/`), repository, followed by an optional `/`
+  # and an optional query.
+  TAP_QUERY_REGEX = /^([^\/]+)\/([^\/]+)\/?(.+)?$/
+
   def search
     if ARGV.include? '--macports'
       exec_browser "http://www.macports.org/ports.php?by=name&substr=#{ARGV.next}"
@@ -19,6 +25,23 @@ module Homebrew extend self
       exec_browser "http://packages.ubuntu.com/search?keywords=#{ARGV.next}&searchon=names&suite=all&section=all"
     elsif (query = ARGV.first).nil?
       puts_columns Formula.names
+    elsif ARGV.first =~ TAP_QUERY_REGEX
+      # So look for user/repo/query or list all formulae by the tap
+      # we downcase to avoid case-insensitive filesystem issues.
+      user, repo, query = $1.downcase, $2.downcase, $3
+      tap_dir = HOMEBREW_LIBRARY/"Taps/#{user}-#{repo}"
+      # If, instead of `user/repo/query` the user wrote `user/repo query`:
+      query = ARGV[1] if query.nil?
+      if tap_dir.directory?
+        # There is a local tap already:
+        result = Dir["#{tap_dir}/*.rb"].map{ |f| File.basename(f).chomp('.rb') }
+        result = result.grep(query_regexp(query)) unless query.nil?
+      else
+        # Search online:
+        query = '' if query.nil?
+        result = search_tap(user, repo, query_regexp(query))
+      end
+      puts_columns result
     else
       rx = query_regexp(query)
       local_results = search_formulae(rx)
@@ -38,7 +61,7 @@ module Homebrew extend self
       count = local_results.length + tap_results.length
 
       if count == 0 and not blacklisted? query
-        puts "No formula found for #{query.inspect}. Searching open pull requests..."
+        puts "No formula found for #{query.inspect}."
         begin
           GitHub.find_pull_requests(rx) { |pull| puts pull }
         rescue GitHub::Error => e
@@ -50,7 +73,6 @@ module Homebrew extend self
 
   SEARCHABLE_TAPS = [
     %w{josegonzalez php},
-    %w{samueljohn python},
     %w{marcqualie nginx},
     %w{Homebrew apache},
     %w{Homebrew versions},
@@ -58,8 +80,8 @@ module Homebrew extend self
     %w{Homebrew games},
     %w{Homebrew science},
     %w{Homebrew completions},
-    %w{Homebrew x11},
     %w{Homebrew binary},
+    %w{Homebrew python},
   ]
 
   def query_regexp(query)
@@ -91,7 +113,10 @@ module Homebrew extend self
       end
     end
     results
-  rescue GitHub::Error, Utils::JSON::Error
+  rescue OpenURI::HTTPError, GitHub::Error, Utils::JSON::Error
+    opoo <<-EOS.undent
+      Failed to search tap: #{user}/#{repo}. Please run `brew update`.
+    EOS
     []
   end
 

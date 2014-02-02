@@ -18,7 +18,7 @@ class Llvm < Formula
   end
 
   option :universal
-  option 'with-clang', 'Build Clang C/ObjC/C++ frontend'
+  option 'with-clang', 'Build Clang support library'
   option 'disable-shared', "Don't build LLVM as a shared library"
   option 'all-targets', 'Build all target backends'
   option 'rtti', 'Build with C++ RTTI'
@@ -28,14 +28,16 @@ class Llvm < Formula
 
   env :std if build.universal?
 
+  keg_only :provided_by_osx
+
   def install
-    if build.with? 'python' and build.include? 'disable-shared'
+    if build.with? "python" and build.include? 'disable-shared'
       raise 'The Python bindings need the shared library.'
     end
 
     Clang.new("clang").brew do
-      clang_dir.install Dir['*']
-    end if build.include? 'with-clang'
+      (buildpath/'tools/clang').install Dir['*']
+    end if build.with? 'clang'
 
     if build.universal?
       ENV['UNIVERSAL'] = '1'
@@ -66,19 +68,9 @@ class Llvm < Formula
     system 'make', 'VERBOSE=1', 'install'
 
     # install llvm python bindings
-    if python
-      python.site_packages.install buildpath/'bindings/python/llvm'
-    end
-
-    # Install clang tools and bindings
-    cd clang_dir do
-      (share/'clang/tools').install 'tools/scan-build', 'tools/scan-view'
-      python.site_packages.install 'bindings/python/clang' if python
-    end if build.include? 'with-clang'
-
-    # Remove all binaries except llvm-config
-    Dir[bin/'*'].each do |exec_path|
-      rm_f exec_path unless File.basename(exec_path) == 'llvm-config'
+    if build.with? "python"
+      (lib+'python2.7/site-packages').install buildpath/'bindings/python/llvm'
+      (lib+'python2.7/site-packages').install buildpath/'tools/clang/bindings/python/clang' if build.with? 'clang'
     end
   end
 
@@ -87,25 +79,12 @@ class Llvm < Formula
   end
 
   def caveats
-    s = ''
-    s += python.standard_caveats if python
-    s += <<-EOS.undent
-      This formula only provide library components of LLVM. To use full
-      featured LLVM please try the llvm3* formulae in homebrew-versions tap,
-      for instance:
-
-          brew tap homebrew/versions
-          brew install llvm33
-
+    <<-EOS.undent
       Extra tools are installed in #{share}/llvm and #{share}/clang.
 
       If you already have LLVM installed, then "brew upgrade llvm" might not work.
       Instead, try:
           brew rm llvm && brew install llvm
     EOS
-  end
-
-  def clang_dir
-    buildpath/'tools/clang'
   end
 end

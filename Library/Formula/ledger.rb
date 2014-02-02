@@ -2,45 +2,41 @@ require 'formula'
 
 class Ledger < Formula
   homepage 'http://ledger-cli.org'
-  url 'https://github.com/downloads/ledger/ledger/ledger-2.6.3.tar.gz'
-  sha1 '5b8e7d8199acb116f13720a5a469fff1f14b4041'
 
-  head 'https://github.com/ledger/ledger.git', :branch => 'master'
+  stable do
+    url 'https://github.com/downloads/ledger/ledger/ledger-2.6.3.tar.gz'
+    sha1 '5b8e7d8199acb116f13720a5a469fff1f14b4041'
 
-  option 'debug', 'Build with debugging symbols enabled'
-
-  depends_on 'boost'
-  depends_on :python => :optional
-  if build.head?
-    depends_on 'cmake' => :build
-    depends_on 'ninja' => :build
-    depends_on 'mpfr'
-    depends_on 'gmp'
-  else
     depends_on 'gettext'
     depends_on 'pcre'
     depends_on 'expat'
     depends_on 'libofx' => :optional
   end
 
-  def install
-    opoo "Homebrew: Sorry, python bindings for --HEAD seem not to install. Help us fixing this!" if build.with? 'python'
+  head do
+    url 'https://github.com/ledger/ledger.git', :branch => 'master'
+    depends_on 'cmake' => :build
+    depends_on 'ninja' => :build
+    depends_on 'mpfr'
+  end
 
+  option 'debug', 'Build with debugging symbols enabled'
+
+  depends_on 'boost'
+  depends_on 'gmp'
+  depends_on :python => :optional
+
+  def install
     # find Homebrew's libpcre
     ENV.append 'LDFLAGS', "-L#{HOMEBREW_PREFIX}/lib"
 
     if build.head?
-      args = [((build.include? 'debug') ? 'debug' : 'opt'), "make", "-N", "-j#{ENV.make_jobs}", "--output=build"]
-      if build.with? 'python'
-        args << '--python'
-        # acprep picks up system python because CMake is used
-        inreplace 'acprep', "self.configure_args  = []",
-                            "self.configure_args  = ['-DPYTHON_INCLUDE_DIR=#{python.incdir}', '-DPYTHON_LIBRARY=#{python.libdir}/lib#{python.xy}.dylib']"
-      end
       # Support homebrew not at /usr/local. Also support Xcode-only setups:
       inreplace 'acprep', 'search_prefixes = [', "search_prefixes = ['#{HOMEBREW_PREFIX}','#{MacOS.sdk_path}/usr',"
+      args = [((build.include? 'debug') ? 'debug' : 'opt'), "make", "install", "-N", "-j#{ENV.make_jobs}", "--output=build"]
+      args << '--python' if build.with? 'python'
       system "./acprep", "--prefix=#{prefix}", *args
-      system "cmake", "-P", "build/cmake_install.cmake", "-DUSE_PYTHON=ON"
+      (share+'ledger').install 'python/demo.py', 'test/input/sample.dat', Dir['contrib']
     else
       args = []
       if build.with? 'libofx'
@@ -53,6 +49,17 @@ class Ledger < Formula
       system 'make'
       ENV.deparallelize
       system 'make install'
+      (share+'ledger').install 'sample.dat', Dir['scripts']
+    end
+  end
+
+  test do
+    output = `#{bin}/ledger --file #{share}/ledger/sample.dat balance --collapse equity`
+    assert_equal '          $-2,500.00  Equity', output.split(/\n/)[0]
+    assert_equal 0, $?.exitstatus
+
+    if build.head? and build.with? 'python'
+      system "python", "#{share}/ledger/demo.py"
     end
   end
 end

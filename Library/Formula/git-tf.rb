@@ -2,12 +2,15 @@ require 'formula'
 
 class GitTf < Formula
   homepage 'http://gittf.codeplex.com/'
-  url 'http://download.microsoft.com/download/A/E/2/AE23B059-5727-445B-91CC-15B7A078A7F4/git-tf-2.0.2.20130214.zip'
-  sha1 '889c1bba6aba892e570a18a386654a50293efbd0'
+  url 'http://download.microsoft.com/download/A/E/2/AE23B059-5727-445B-91CC-15B7A078A7F4/git-tf-2.0.3.20131219.zip'
+  sha1 'a16f98aa1cd6bff2931b2fa361711ca7051258f4'
 
-  depends_on 'maven' unless build.stable?
+  conflicts_with 'homebrew/versions/git-tf-2.0.2', :because => 'two different versions of the same library'
 
-  head 'https://git01.codeplex.com/gittf', :using => :git
+  head do
+    url 'https://git01.codeplex.com/gittf', :using => :git
+    depends_on 'maven'
+  end
 
   def install
     if build.stable?
@@ -24,6 +27,11 @@ class GitTf < Formula
 
     bin.write_exec_script libexec/'git-tf'
     (share/'doc/git-tf').install Dir['Git-TF_*'] + Dir['ThirdPartyNotices*']
+  end
+
+  def caveats; <<-EOS.undent
+    This release removes support for TFS 2005 and 2008. Use a previous version if needed.
+    EOS
   end
 
   test do

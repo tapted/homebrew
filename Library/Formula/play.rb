@@ -2,24 +2,25 @@ require 'formula'
 
 class Play < Formula
   homepage 'http://www.playframework.org/'
-  url 'http://downloads.typesafe.com/play/2.1.3/play-2.1.3.zip'
-  sha1 'f399da960980edc929011c07ef64ee868eca8a9f'
+  head 'https://github.com/playframework/playframework.git'
+  url 'http://downloads.typesafe.com/play/2.2.1/play-2.2.1.zip'
+  sha1 'e4567f3cf61536908d66e85bde48d7e953f0a01f'
 
-  head 'https://github.com/playframework/Play20.git'
+  conflicts_with 'sox', :because => 'both install `play` binaries'
 
   devel do
-    url 'http://downloads.typesafe.com/play/2.2.0-M2/play-2.2.0-M2.zip'
-    version '2.2.0-M2'
-    sha1 '8c4d7393b8d50da4e02b59c67da2379710a305ea'
+    url 'http://downloads.typesafe.com/play/2.2.2-RC2/play-2.2.2-RC2.zip'
+    sha1 '30a31d9f01893f4ab57e554aa339994eea20bd51'
   end
 
   def install
-    rm Dir['*.bat'] # remove windows' bat files
+    system "./framework/build", "publish-local" if build.head?
+
+    # remove Windows .bat files
+    rm Dir['*.bat']
+    rm Dir["#{buildpath}/**/*.bat"] if build.head?
+
     libexec.install Dir['*']
-    inreplace libexec+"play" do |s|
-      s.gsub! "$dir/", "$dir/../libexec/"
-      s.gsub! "dir=`dirname $PRG`", "dir=`dirname $0` && dir=$dir/`dirname $PRG`"
-    end
-    bin.install_symlink libexec+'play'
+    bin.install_symlink libexec/'play'
   end
 end
