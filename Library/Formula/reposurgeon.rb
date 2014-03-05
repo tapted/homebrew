@@ -2,8 +2,8 @@ require 'formula'
 
 class Reposurgeon < Formula
   homepage 'http://www.catb.org/esr/reposurgeon/'
-  url 'http://www.catb.org/~esr/reposurgeon/reposurgeon-3.1.tar.gz'
-  sha256 '34f6ca25ce9ebab477661294dcde943e70621bafb523a0cb28a8b551bb6a532f'
+  url 'http://www.catb.org/~esr/reposurgeon/reposurgeon-3.6.tar.gz'
+  sha256 'c07354319813095f5db6c416fd491eb8efd4d7c67db7161c88fd2c3afe0d5386'
 
   depends_on 'asciidoc'
   depends_on 'xmlto'
