@@ -76,19 +76,19 @@ class Qt < Formula
 
     if build.with? 'qt3support'
       args << "-qt3support"
-    # forced else
-    # forced   args << "-no-qt3support"
-    # forced end
+    else
+      args << "-no-qt3support"
+    end
 
     args << "-nomake" << "docs" if build.without? 'docs'
 
-    # if MacOS.prefer_64_bit? or build.universal?
-    #  args << '-arch' << 'x86_64'
-    # forced end
+    if MacOS.prefer_64_bit? or build.universal?
+      args << '-arch' << 'x86_64'
+    end
 
-    # forced if !MacOS.prefer_64_bit? or ARGV.build_universal?
+    if !MacOS.prefer_64_bit? or build.universal?
       args << '-arch' << 'x86'
-    # forced end
+    end
 
     args << '-developer-build' if build.include? 'developer'
 
