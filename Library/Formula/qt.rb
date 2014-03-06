@@ -82,8 +82,8 @@ class Qt < Formula
 
     args << "-nomake" << "docs" if build.without? 'docs'
 
-    if MacOS.prefer_64_bit? or build.universal?
-      args << '-arch' << 'x86_64'
+    # if MacOS.prefer_64_bit? or build.universal?
+    #  args << '-arch' << 'x86_64'
     # forced end
 
     # forced if !MacOS.prefer_64_bit? or ARGV.build_universal?
