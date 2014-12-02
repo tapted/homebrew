@@ -1,37 +1,42 @@
-require 'formula'
+require "formula"
 
 class Libcppa < Formula
-  homepage 'http://libcppa.blogspot.it'
-  url 'https://github.com/Neverlord/libcppa/archive/V0.8.1.tar.gz'
-  sha1 'd4f096aae2bb72e254ad6df45edf3fb62370acaa'
+  homepage "http://actor-framework.org/"
+  url "https://github.com/actor-framework/actor-framework/archive/0.11.0.tar.gz"
+  sha1 "202f2fd72a5af59d7ace6b7300df1fcc19f1857f"
 
-  depends_on :macos => :lion
-  depends_on 'cmake' => :build
+  # since upstream has rename the project to actor-framework (or libcaf in its
+  # pkgconfig file), we need to rename libcppa to libcaf in the future
 
-  option 'with-opencl', 'Build with OpenCL actors'
-  option 'with-examples', 'Build examples'
-
-  fails_with :gcc do
-    cause 'libcppa requires a C++11 compliant compiler.'
+  bottle do
+    cellar :any
+    sha1 "b0e9bef1983d561763e21539c9b9196d75e5a935" => :yosemite
+    sha1 "ed71bb57236d2aecf4e19e5044ca3af22969b5c5" => :mavericks
+    sha1 "8224fe20d5d4bd184a9b6c15ddd6143740ea23ca" => :mountain_lion
   end
 
-  fails_with :llvm do
-    cause 'libcppa requires a C++11 compliant compiler.'
-  end
+  depends_on "cmake" => :build
+
+  needs :cxx11
+
+  option "with-opencl", "Build with OpenCL actors"
+  option "with-examples", "Build examples"
+  option "without-check", "Skip build-time tests (not recommended)"
 
   def install
+    ENV.cxx11
+
     args = %W[
       --prefix=#{prefix}
       --build-static
-      --disable-context-switching
     ]
 
-    args << '--with-opencl' if build.with? 'opencl'
-    args << '--no-examples' if build.without? 'examples'
+    args << "--no-opencl" if build.without? "opencl"
+    args << "--no-examples" if build.without? "examples"
 
     system "./configure", *args
     system "make"
-    system "make", "test"
+    system "make", "test" if build.with? "check"
     system "make", "install"
   end
 end

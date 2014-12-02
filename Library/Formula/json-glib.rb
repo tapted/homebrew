@@ -1,16 +1,26 @@
-require 'formula'
+require "formula"
 
 class JsonGlib < Formula
-  homepage 'http://live.gnome.org/JsonGlib'
-  url 'http://ftp.gnome.org/pub/GNOME/sources/json-glib/0.16/json-glib-0.16.2.tar.xz'
-  sha256 'a95475364ec27ab1d2a69303cf579018558bfb6981e3498b3aaf1e6401f7422c'
+  homepage "http://live.gnome.org/JsonGlib"
+  url "http://ftp.gnome.org/pub/gnome/sources/json-glib/1.0/json-glib-1.0.2.tar.xz"
+  sha256 "887bd192da8f5edc53b490ec51bf3ffebd958a671f5963e4f3af32c22e35660a"
 
-  depends_on 'pkg-config' => :build
-  depends_on 'glib'
+  bottle do
+    revision 2
+    sha1 "58daae021ca6c990a0e29e5b7c72699ca4e4800a" => :yosemite
+    sha1 "18168428af31175e10e4c9f52809c58c6afebc22" => :mavericks
+    sha1 "64de84e6abc6bcc2700e45d6288646d14bf5fc05" => :mountain_lion
+  end
+
+  depends_on "pkg-config" => :build
+  depends_on "glib"
+  depends_on "gobject-introspection"
 
   def install
-    system "./configure", "--disable-debug", "--disable-dependency-tracking",
-                          "--prefix=#{prefix}"
+    system "./configure", "--disable-debug",
+                          "--disable-dependency-tracking",
+                          "--prefix=#{prefix}",
+                          "--enable-introspection=yes"
     system "make install"
   end
 end

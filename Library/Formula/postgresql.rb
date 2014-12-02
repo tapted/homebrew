@@ -1,14 +1,30 @@
-require 'formula'
+require "formula"
 
 class Postgresql < Formula
-  homepage 'http://www.postgresql.org/'
-  url 'http://ftp.postgresql.org/pub/source/v9.3.3/postgresql-9.3.3.tar.bz2'
-  sha256 'e925d8abe7157bd8bece6b7c0dd0c343d87a2b4336f85f4681ce596af99c3879'
+  homepage "http://www.postgresql.org/"
+  revision 1
+
+  stable do
+    url "http://ftp.postgresql.org/pub/source/v9.3.5/postgresql-9.3.5.tar.bz2"
+    sha256 "14176ffb1f90a189e7626214365be08ea2bfc26f26994bafb4235be314b9b4b0"
+
+    # ossp-uuid is no longer required for uuid support since 9.4beta2:
+    depends_on "ossp-uuid" => :recommended
+    # Fix uuid-ossp build issues: http://archives.postgresql.org/pgsql-general/2012-07/msg00654.php
+    patch :DATA
+  end
 
   bottle do
-    sha1 "299a72eac118abd9847379f2a247ed663e97cc64" => :mavericks
-    sha1 "6799c9ae3ae1f954e1b6c8b06818e2168ca2efe2" => :mountain_lion
-    sha1 "f44a9cf2fe073a8cce40bc8c2a8618553d826ac8" => :lion
+    revision 1
+    sha1 "00d8f44111b8585fc2fa045fb33098cde3bcf230" => :yosemite
+    sha1 "d298f4cd7fffa6b8b879ccc2c6d32fc191be41ed" => :mavericks
+    sha1 "c5c5d23e95c1950d4b33865b8ebdce28b4e6706f" => :mountain_lion
+    sha1 "860395322283401cfc1d0694984c272546f21fa9" => :lion
+  end
+
+  devel do
+    url 'http://ftp.postgresql.org/pub/source/v9.4rc1/postgresql-9.4rc1.tar.bz2'
+    sha256 '6ce91d78fd6c306536f5734dbaca10889814b9d0fe0b38a41b3e635d95241c7c'
   end
 
   option '32-bit'
@@ -16,10 +32,10 @@ class Postgresql < Formula
   option 'no-tcl', 'Build without Tcl support'
   option 'enable-dtrace', 'Build with DTrace support'
 
+  depends_on 'openssl'
   depends_on 'readline'
   depends_on 'libxml2' if MacOS.version <= :leopard # Leopard libxml is too old
-  depends_on 'ossp-uuid' => :recommended
-  depends_on :python => :recommended
+  depends_on :python => :optional
 
   conflicts_with 'postgres-xc',
     :because => 'postgresql and postgres-xc install the same binaries.'
@@ -27,11 +43,6 @@ class Postgresql < Formula
   fails_with :clang do
     build 211
     cause 'Miscompilation resulting in segfault on queries'
-  end
-
-  # Fix uuid-ossp build issues: http://archives.postgresql.org/pgsql-general/2012-07/msg00654.php
-  def patches
-    DATA
   end
 
   def install
@@ -45,7 +56,6 @@ class Postgresql < Formula
       --enable-thread-safety
       --with-bonjour
       --with-gssapi
-      --with-krb5
       --with-ldap
       --with-openssl
       --with-pam
@@ -53,21 +63,33 @@ class Postgresql < Formula
       --with-libxslt
     ]
 
-    args << "--with-ossp-uuid" if build.with? 'ossp-uuid'
     args << "--with-python" if build.with? 'python'
     args << "--with-perl" unless build.include? 'no-perl'
-    args << "--with-tcl" unless build.include? 'no-tcl'
+
+    # The CLT is required to build tcl support on 10.7 and 10.8 because
+    # tclConfig.sh is not part of the SDK
+    unless build.include?("no-tcl") || MacOS.version < :mavericks && MacOS::CLT.installed?
+      args << "--with-tcl"
+
+      if File.exist?("#{MacOS.sdk_path}/usr/lib/tclConfig.sh")
+        args << "--with-tclconfig=#{MacOS.sdk_path}/usr/lib"
+      end
+    end
+
     args << "--enable-dtrace" if build.include? 'enable-dtrace'
 
-    if build.with? 'ossp-uuid'
+    if build.with?("ossp-uuid")
+      args << "--with-ossp-uuid"
       ENV.append 'CFLAGS', `uuid-config --cflags`.strip
       ENV.append 'LDFLAGS', `uuid-config --ldflags`.strip
       ENV.append 'LIBS', `uuid-config --libs`.strip
+    elsif build.devel?
+      # Apple's UUID implementation is compatible with e2fs NOT bsd
+      args << "--with-uuid=e2fs"
     end
 
     if build.build_32_bit?
-      ENV.append 'CFLAGS', "-arch #{MacOS.preferred_arch}"
-      ENV.append 'LDFLAGS', "-arch #{MacOS.preferred_arch}"
+      ENV.append %w{CFLAGS LDFLAGS}, "-arch #{Hardware::CPU.arch_32_bit}"
     end
 
     system "./configure", *args
@@ -98,7 +120,8 @@ class Postgresql < Formula
     When installing the postgres gem, including ARCHFLAGS is recommended:
       ARCHFLAGS="-arch x86_64" gem install pg
 
-    To install gems without sudo, see the Homebrew wiki.
+    To install gems without sudo, see the Homebrew documentation:
+    https://github.com/Homebrew/homebrew/blob/master/share/doc/homebrew/Gems,-Eggs-and-Perl-Modules.md
     EOS
   end
 
@@ -130,6 +153,10 @@ class Postgresql < Formula
     </dict>
     </plist>
     EOS
+  end
+
+  test do
+    system "#{bin}/initdb", testpath
   end
 end
 

@@ -3,7 +3,7 @@ require 'utils'
 require 'extend/ENV'
 require 'formula_cellar_checks'
 
-module Homebrew extend self
+module Homebrew
   def audit
     formula_count = 0
     problem_count = 0
@@ -22,11 +22,9 @@ module Homebrew extend self
       fa.audit
 
       unless fa.problems.empty?
-        puts "#{f.name}:"
-        fa.problems.each { |p| puts " * #{p}" }
-        puts
         formula_count += 1
         problem_count += fa.problems.size
+        puts "#{f.name}:", fa.problems.map { |p| " * #{p}" }, ""
       end
     end
 
@@ -36,35 +34,17 @@ module Homebrew extend self
   end
 end
 
-class Module
-  def redefine_const(name, value)
-    __send__(:remove_const, name) if const_defined?(name)
-    const_set(name, value)
-  end
-end
-
-# Formula extensions for auditing
-class Formula
-  def head_only?
-    @head and @stable.nil?
-  end
-
-  def text
-    @text ||= FormulaText.new(@path)
-  end
-end
-
 class FormulaText
   def initialize path
-    @text = path.open('r') { |f| f.read }
+    @text = path.open("rb", &:read)
   end
 
   def without_patch
-    @text.split("__END__")[0].strip()
+    @text.split("\n__END__").first
   end
 
   def has_DATA?
-    /\bDATA\b/ =~ @text
+    /^[^#]*\bDATA\b/ =~ @text
   end
 
   def has_END?
@@ -79,7 +59,7 @@ end
 class FormulaAuditor
   include FormulaCellarChecks
 
-  attr_reader :f, :text, :problems
+  attr_reader :formula, :text, :problems
 
   BUILD_TIME_DEPS = %W[
     autoconf
@@ -96,92 +76,87 @@ class FormulaAuditor
     swig
   ]
 
-  def initialize f
-    @f = f
+  def initialize(formula)
+    @formula = formula
     @problems = []
-    @text = f.text.without_patch
-    @specs = %w{stable devel head}.map { |s| f.send(s) }.compact
-
-    # We need to do this in case the formula defines a patch that uses DATA.
-    f.class.redefine_const :DATA, ""
+    @text = FormulaText.new(formula.path)
+    @specs = %w{stable devel head}.map { |s| formula.send(s) }.compact
   end
 
   def audit_file
-    unless f.path.stat.mode.to_s(8) == "100644"
-      problem "Incorrect file permissions: chmod 644 #{f.path}"
+    unless formula.path.stat.mode == 0100644
+      problem "Incorrect file permissions: chmod 644 #{formula.path}"
     end
 
-    if f.text.has_DATA? and not f.text.has_END?
+    if text.has_DATA? and not text.has_END?
       problem "'DATA' was found, but no '__END__'"
     end
 
-    if f.text.has_END? and not f.text.has_DATA?
+    if text.has_END? and not text.has_DATA?
       problem "'__END__' was found, but 'DATA' is not used"
     end
 
-    unless f.text.has_trailing_newline?
+    unless text.has_trailing_newline?
       problem "File should end with a newline"
     end
   end
 
+  @@aliases ||= Formula.aliases
+
   def audit_deps
-    # Don't depend_on aliases; use full name
-    @@aliases ||= Formula.aliases
-    f.deps.select { |d| @@aliases.include? d.name }.each do |d|
-      real_name = d.to_formula.name
-      problem "Dependency '#{d}' is an alias; use the canonical name '#{real_name}'."
-    end
-
-    # Check for things we don't like to depend on.
-    # We allow non-Homebrew installs whenever possible.
-    f.deps.each do |dep|
-      begin
-        dep_f = dep.to_formula
-      rescue TapFormulaUnavailableError
-        # Don't complain about missing cross-tap dependencies
-        next
-      rescue FormulaUnavailableError
-        problem "Can't find dependency #{dep.name.inspect}."
-        next
-      end
-
-      dep.options.reject do |opt|
-        next true if dep_f.build.has_option?(opt.name)
-        dep_f.requirements.detect do |r|
-          if r.tags.include? :recommended
-            opt.name == "with-#{r.name}"
-          elsif r.tags.include? :optional
-            opt.name == "without-#{r.name}"
-          end
+    @specs.each do |spec|
+      # Check for things we don't like to depend on.
+      # We allow non-Homebrew installs whenever possible.
+      spec.deps.each do |dep|
+        begin
+          dep_f = dep.to_formula
+        rescue TapFormulaUnavailableError
+          # Don't complain about missing cross-tap dependencies
+          next
+        rescue FormulaUnavailableError
+          problem "Can't find dependency #{dep.name.inspect}."
+          next
         end
-      end.each do |opt|
-        problem "Dependency #{dep} does not define option #{opt.name.inspect}"
-      end
 
-      case dep.name
-      when *BUILD_TIME_DEPS
-        next if dep.build? or dep.run?
-        problem %{#{dep} dependency should be "depends_on '#{dep}' => :build"}
-      when "git", "ruby", "emacs", "mercurial"
-        problem <<-EOS.undent
-          Don't use #{dep} as a dependency. We allow non-Homebrew
-          #{dep} installations.
-          EOS
-      when 'gfortran'
-        problem "Use `depends_on :fortran` instead of `depends_on 'gfortran'`"
-      when 'open-mpi', 'mpich2'
-        problem <<-EOS.undent
-          There are multiple conflicting ways to install MPI. Use an MPIDependency:
-            depends_on :mpi => [<lang list>]
-          Where <lang list> is a comma delimited list that can include:
-            :cc, :cxx, :f77, :f90
-          EOS
+        if @@aliases.include?(dep.name)
+          problem "Dependency '#{dep.name}' is an alias; use the canonical name '#{dep.to_formula.name}'."
+        end
+
+        dep.options.reject do |opt|
+          next true if dep_f.option_defined?(opt)
+          dep_f.requirements.detect do |r|
+            if r.recommended?
+              opt.name == "with-#{r.name}"
+            elsif r.optional?
+              opt.name == "without-#{r.name}"
+            end
+          end
+        end.each do |opt|
+          problem "Dependency #{dep} does not define option #{opt.name.inspect}"
+        end
+
+        case dep.name
+        when *BUILD_TIME_DEPS
+          next if dep.build? or dep.run?
+          problem %{#{dep} dependency should be "depends_on '#{dep}' => :build"}
+        when "git", "ruby", "mercurial"
+          problem "Don't use #{dep} as a dependency. We allow non-Homebrew #{dep} installations."
+        when 'gfortran'
+          problem "Use `depends_on :fortran` instead of `depends_on 'gfortran'`"
+        when 'open-mpi', 'mpich2'
+          problem <<-EOS.undent
+            There are multiple conflicting ways to install MPI. Use an MPIDependency:
+              depends_on :mpi => [<lang list>]
+            Where <lang list> is a comma delimited list that can include:
+              :cc, :cxx, :f77, :f90
+            EOS
+        end
       end
     end
   end
 
   def audit_conflicts
-    f.conflicts.each do |c|
+    formula.conflicts.each do |c|
       begin
         Formulary.factory(c.name)
       rescue FormulaUnavailableError
@@ -191,19 +166,21 @@ class FormulaAuditor
   end
 
   def audit_urls
-    unless f.homepage =~ %r[^https?://]
-      problem "The homepage should start with http or https (url is #{f.homepage})."
+    homepage = formula.homepage
+
+    unless homepage =~ %r[^https?://]
+      problem "The homepage should start with http or https (URL is #{homepage})."
     end
 
     # Check for http:// GitHub homepage urls, https:// is preferred.
     # Note: only check homepages that are repo pages, not *.github.com hosts
-    if f.homepage =~ %r[^http://github\.com/]
-      problem "Use https:// URLs for homepages on GitHub (url is #{f.homepage})."
+    if homepage =~ %r[^http://github\.com/]
+      problem "Use https:// URLs for homepages on GitHub (URL is #{homepage})."
     end
 
     # Google Code homepages should end in a slash
-    if f.homepage =~ %r[^https?://code\.google\.com/p/[^/]+[^/]$]
-      problem "Google Code homepage should end with a slash (url is #{f.homepage})."
+    if homepage =~ %r[^https?://code\.google\.com/p/[^/]+[^/]$]
+      problem "Google Code homepage should end with a slash (URL is #{homepage})."
     end
 
     urls = @specs.map(&:url)
@@ -267,7 +244,7 @@ class FormulaAuditor
     end
 
     # Use new-style archive downloads
-    urls.select { |u| u =~ %r[https://.*/(?:tar|zip)ball/] && u !~ %r[\.git$] }.each do |u|
+    urls.select { |u| u =~ %r[https://.*github.*/(?:tar|zip)ball/] && u !~ %r[\.git$] }.each do |u|
       problem "Use /archive/ URLs for GitHub tarballs (url is #{u})."
     end
 
@@ -278,10 +255,12 @@ class FormulaAuditor
   end
 
   def audit_specs
-    problem "Head-only (no stable download)" if f.head_only?
+    if head_only?(formula) && formula.tap != "homebrew/homebrew-headonly"
+      problem "Head-only (no stable download)"
+    end
 
     %w[Stable Devel HEAD].each do |name|
-      next unless spec = f.send(name.downcase)
+      next unless spec = formula.send(name.downcase)
 
       ra = ResourceAuditor.new(spec).audit
       problems.concat ra.problems.map { |problem| "#{name}: #{problem}" }
@@ -295,21 +274,35 @@ class FormulaAuditor
 
       spec.patches.select(&:external?).each { |p| audit_patch(p) }
     end
+
+    if formula.stable && formula.devel
+      if formula.devel.version < formula.stable.version
+        problem "devel version #{formula.devel.version} is older than stable version #{formula.stable.version}"
+      elsif formula.devel.version == formula.stable.version
+        problem "stable and devel versions are identical"
+      end
+    end
   end
 
   def audit_patches
-    patches = Patch.normalize_legacy_patches(f.patches)
-    patches.grep(LegacyPatch).each { |p| audit_patch(p) }
+    legacy_patches = Patch.normalize_legacy_patches(formula.patches).grep(LegacyPatch)
+    if legacy_patches.any?
+      problem "Use the patch DSL instead of defining a 'patches' method"
+      legacy_patches.each { |p| audit_patch(p) }
+    end
   end
 
   def audit_patch(patch)
     case patch.url
-    when %r[raw\.github\.com], %r[gist\.github\.com/raw], %r[gist\.github\.com/.+/raw$]
+    when %r[raw\.github\.com], %r[gist\.github\.com/raw], %r[gist\.github\.com/.+/raw],
+      %r[gist\.githubusercontent\.com/.+/raw]
       unless patch.url =~ /[a-fA-F0-9]{40}/
         problem "GitHub/Gist patches should specify a revision:\n#{patch.url}"
       end
     when %r[macports/trunk]
       problem "MacPorts patches should specify a revision instead of trunk:\n#{patch.url}"
+    when %r[^https?://github\.com/.*commit.*\.patch$]
+      problem "GitHub appends a git version to patches; use .diff instead."
     end
   end
 
@@ -331,7 +324,7 @@ class FormulaAuditor
     end
   end
 
-  def audit_line(line)
+  def audit_line(line, lineno)
     if line =~ /<(Formula|AmazonWebServicesFormula|ScriptFileFormula|GithubGistFormula)/
       problem "Use a space in class inheritance: class Foo < #{$1}"
     end
@@ -377,8 +370,8 @@ class FormulaAuditor
     end
 
     # Prefer formula path shortcuts in Pathname+
-    if line =~ %r{\(\s*(prefix\s*\+\s*(['"])(bin|include|libexec|lib|sbin|share)[/'"])}
-      problem "\"(#{$1}...#{$2})\" should be \"(#{$3}+...)\""
+    if line =~ %r{\(\s*(prefix\s*\+\s*(['"])(bin|include|libexec|lib|sbin|share|Frameworks)[/'"])}
+      problem "\"(#{$1}...#{$2})\" should be \"(#{$3.downcase}+...)\""
     end
 
     if line =~ %r[((man)\s*\+\s*(['"])(man[1-8])(['"]))]
@@ -386,8 +379,8 @@ class FormulaAuditor
     end
 
     # Prefer formula path shortcuts in strings
-    if line =~ %r[(\#\{prefix\}/(bin|include|libexec|lib|sbin|share))]
-      problem "\"#{$1}\" should be \"\#{#{$2}}\""
+    if line =~ %r[(\#\{prefix\}/(bin|include|libexec|lib|sbin|share|Frameworks))]
+      problem "\"#{$1}\" should be \"\#{#{$2.downcase}}\""
     end
 
     if line =~ %r[((\#\{prefix\}/share/man/|\#\{man\}/)(man[1-8]))]
@@ -409,11 +402,11 @@ class FormulaAuditor
 
     # No trailing whitespace, please
     if line =~ /[\t ]+$/
-      problem "Trailing whitespace was found"
+      problem "#{lineno}: Trailing whitespace was found"
     end
 
     if line =~ /if\s+ARGV\.include\?\s+'--(HEAD|devel)'/
-      problem "Use \"if ARGV.build_#{$1.downcase}?\" instead"
+      problem "Use \"if build.#{$1.downcase}?\" instead"
     end
 
     if line =~ /make && make/
@@ -461,8 +454,12 @@ class FormulaAuditor
       problem "Don't duplicate 'without': Use `build.without? \"#{$1}\"` to check for \"--without-#{$1}\""
     end
 
-    if line =~ /unless build\.with(out)?\?/
-      problem "Don't use unless with 'build.with#{$1}': use 'if build.with#{$1}?'"
+    if line =~ /unless build\.with\?(.*)/
+      problem "Use if build.without?#{$1} instead of unless build.with?#{$1}"
+    end
+
+    if line =~ /unless build\.without\?(.*)/
+      problem "Use if build.with?#{$1} instead of unless build.without?#{$1}"
     end
 
     if line =~ /(not\s|!)\s*build\.with?\?/
@@ -474,13 +471,15 @@ class FormulaAuditor
     end
 
     if line =~ /ARGV\.(?!(debug\?|verbose\?|value[\(\s]))/
-      # Python formulae need ARGV for Requirements
-      problem "Use build instead of ARGV to check options",
-              :whitelist => %w{pygobject3 qscintilla2}
+      problem "Use build instead of ARGV to check options"
     end
 
     if line =~ /def options/
       problem "Use new-style option definitions"
+    end
+
+    if line =~ /def test$/
+      problem "Use new-style test definitions (test do)"
     end
 
     if line =~ /MACOS_VERSION/
@@ -516,6 +515,10 @@ class FormulaAuditor
     if line =~ /depends_on ['"](.+)['"] (if.+|unless.+)$/
       audit_conditional_dep($1, $2, $&)
     end
+
+    if line =~ /(Dir\[("[^\*{},]+")\])/
+      problem "#{$1} is unnecessary; just use #{$2}"
+    end
   end
 
   def audit_conditional_dep(dep, condition, line)
@@ -534,21 +537,8 @@ class FormulaAuditor
     Symbol === dep ? dep.inspect : "'#{dep}'"
   end
 
-  def audit_check_output warning_and_description
-    return unless warning_and_description
-    warning, description = *warning_and_description
-    problem "#{warning}\n#{description}"
-  end
-
-  def audit_installed
-    audit_check_output(check_manpages)
-    audit_check_output(check_infopages)
-    audit_check_output(check_jars)
-    audit_check_output(check_non_libraries)
-    audit_check_output(check_non_executables(f.bin))
-    audit_check_output(check_generic_executables(f.bin))
-    audit_check_output(check_non_executables(f.sbin))
-    audit_check_output(check_generic_executables(f.sbin))
+  def audit_check_output(output)
+    problem(output) if output
   end
 
   def audit
@@ -559,15 +549,18 @@ class FormulaAuditor
     audit_conflicts
     audit_patches
     audit_text
-    text.each_line { |line| audit_line(line) }
+    text.without_patch.split("\n").each_with_index { |line, lineno| audit_line(line, lineno+1) }
     audit_installed
   end
 
   private
 
-  def problem p, options={}
-    return if options[:whitelist].to_a.include? f.name
+  def problem p
     @problems << p
+  end
+
+  def head_only?(formula)
+    formula.head && formula.stable.nil?
   end
 end
 
@@ -631,6 +624,12 @@ class ResourceAuditor
 
   def audit_download_strategy
     return unless using
+
+    if using == :ssl3 || using == CurlSSL3DownloadStrategy
+      problem "The SSL3 download strategy is deprecated, please choose a different URL"
+    elsif using == CurlUnsafeDownloadStrategy
+      problem "#{using.name} is deprecated, please choose a different URL"
+    end
 
     url_strategy   = DownloadStrategyDetector.detect(url)
     using_strategy = DownloadStrategyDetector.detect('', using)

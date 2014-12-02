@@ -1,50 +1,45 @@
-require 'formula'
+require "formula"
 
 class Libgcrypt < Formula
-  homepage 'http://gnupg.org/'
-  url 'ftp://ftp.gnupg.org/gcrypt/libgcrypt/libgcrypt-1.6.1.tar.bz2'
-  sha1 'f03d9b63ac3b17a6972fc11150d136925b702f02'
+  homepage "https://gnupg.org/"
+  url "ftp://ftp.gnupg.org/gcrypt/libgcrypt/libgcrypt-1.6.2.tar.bz2"
+  mirror "ftp://mirror.tje.me.uk/pub/mirrors/ftp.gnupg.org/libgcrypt/libgcrypt-1.6.2.tar.bz2"
+  sha1 "cc31aca87e4a3769cb86884a3f5982b2cc8eb7ec"
 
   bottle do
     cellar :any
-    sha1 "aeebdee7d9887b3bf6ec5df41cc41c28dca98ce9" => :mavericks
-    sha1 "24efe9c0ff37edb0e88f94714c3e10483614cd07" => :mountain_lion
-    sha1 "f0c2d69e6552d69fa59342613831b96085ebd85e" => :lion
+    revision 3
+    sha1 "6ff92bb673ffc75595cd1746d3990b3957066580" => :yosemite
+    sha1 "95cf78feab0e902da9ca9aee3433b2211254fb0c" => :mavericks
+    sha1 "a8c8e6d85ca8dbd30d429ee9c9c50380a7fc0082" => :mountain_lion
   end
 
-  depends_on 'libgpg-error'
+  depends_on "libgpg-error"
 
   option :universal
 
-  resource 'config.h.ed' do
-    url 'http://trac.macports.org/export/113198/trunk/dports/devel/libgcrypt/files/config.h.ed'
-    version '113198'
-    sha1 '136f636673b5c9d040f8a55f59b430b0f1c97d7a'
-  end if build.universal?
-
-  fails_with :clang do
-    build 77
-    cause "basic test fails"
+  resource "config.h.ed" do
+    url "http://trac.macports.org/export/113198/trunk/dports/devel/libgcrypt/files/config.h.ed"
+    version "113198"
+    sha1 "136f636673b5c9d040f8a55f59b430b0f1c97d7a"
   end
 
   def install
     ENV.universal_binary if build.universal?
 
-    ENV.append 'CFLAGS', '-std=gnu89 -fheinous-gnu-extensions' if ENV.compiler == :clang
-
     system "./configure", "--disable-dependency-tracking",
                           "--prefix=#{prefix}",
                           "--disable-asm",
-                          "--with-gpg-error-prefix=#{HOMEBREW_PREFIX}"
+                          "--with-gpg-error-prefix=#{Formula["libgpg-error"].opt_prefix}"
 
     if build.universal?
-      buildpath.install resource('config.h.ed')
+      buildpath.install resource("config.h.ed")
       system "ed -s - config.h <config.h.ed"
     end
 
     # Parallel builds work, but only when run as separate steps
-    system "make", "CFLAGS=#{ENV.cflags}"
-    system "make check"
-    system "make install"
+    system "make"
+    system "make", "check"
+    system "make", "install"
   end
 end

@@ -1,13 +1,13 @@
-require 'formula'
+require "formula"
 
 class Logentries < Formula
-  homepage 'https://logentries.com/doc/agent/'
-  url 'https://github.com/logentries/le/archive/v1.2.17.tar.gz'
-  sha1 'cf961dd02a3f5df367f8435478e4362b8190b3d2'
+  homepage "https://logentries.com/doc/agent/"
+  url "https://github.com/logentries/le/archive/v1.3.2.tar.gz"
+  sha1 "5085a64e4f3c0119e213e53fa750e7b895f786e5"
 
-  conflicts_with 'le', :because => 'both install a le binary'
+  conflicts_with "le", :because => "both install a le binary"
 
   def install
-    bin.install 'le'
+    bin.install "le"
   end
 end

@@ -1,7 +1,7 @@
 require 'testing_env'
 require 'formula'
 
-class FormulaValidationTests < Test::Unit::TestCase
+class FormulaValidationTests < Homebrew::TestCase
   def assert_invalid(attr, &block)
     e = assert_raises(FormulaValidationError, &block)
     assert_equal attr, e.attr
@@ -49,7 +49,7 @@ class FormulaValidationTests < Test::Unit::TestCase
   def test_validates_when_initialize_overridden
     assert_invalid :name do
       formula do
-        def initialize; end
+        def initialize(*); end
       end.brew {}
     end
   end
@@ -62,12 +62,12 @@ class FormulaValidationTests < Test::Unit::TestCase
       end
     end
 
-    assert_equal "foo", f.url
+    assert_predicate f, :devel?
   end
 
   def test_head_only_valid
     f = formula { head "foo" }
-    assert_equal "foo", f.url
+    assert_predicate f, :head?
   end
 
   def test_empty_formula_invalid

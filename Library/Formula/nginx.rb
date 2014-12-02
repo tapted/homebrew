@@ -1,51 +1,41 @@
-require 'formula'
+require "formula"
 
 class Nginx < Formula
-  homepage 'http://nginx.org/'
-  url 'http://nginx.org/download/nginx-1.4.6.tar.gz'
-  sha1 '1d790fd2b403b0b694a8dbbc28f7e34dbc3ca863'
+  homepage "http://nginx.org/"
+  url "http://nginx.org/download/nginx-1.6.2.tar.gz"
+  sha1 "1a5458bc15acf90eea16353a1dd17285cf97ec35"
 
   devel do
-    url 'http://nginx.org/download/nginx-1.5.11.tar.gz'
-    sha1 'c52239582d67063ab40ec2f88aa82ffb3eb8f469'
+    url "http://nginx.org/download/nginx-1.7.7.tar.gz"
+    sha1 "c8e1caaa0dc6cfe540082c52ecd856ab794e38dc"
   end
 
-  head 'http://hg.nginx.org/nginx/', :using => :hg
+  head "http://hg.nginx.org/nginx/", :using => :hg
 
   bottle do
-    revision 1
-    sha1 "0e0388d8077de0f985662fab65f22c49a4525f33" => :mavericks
-    sha1 "0c1d1d70815f4e0a1a213a2a888740aac839cb97" => :mountain_lion
-    sha1 "706403994b8ec210a9fd027820107f1684988d12" => :lion
+    sha1 "7aa0fc40ada6fa9623817f3f5bac0310b7fb1b45" => :mavericks
+    sha1 "c1660c583f74b0829f752804f566769e607998a7" => :mountain_lion
+    sha1 "2f4810ccc3cb5687685028591668ecae50b3cb30" => :lion
   end
 
   env :userpaths
 
-  option 'with-passenger', 'Compile with support for Phusion Passenger module'
-  option 'with-webdav', 'Compile with support for WebDAV module'
-  option 'with-debug', 'Compile with support for debug log'
-  option 'with-spdy', 'Compile with support for SPDY module'
-  option 'with-gunzip', 'Compile with support for gunzip module'
+  # Before submitting more options to this formula please check they aren't
+  # already in Homebrew/homebrew-nginx/nginx-full:
+  # https://github.com/Homebrew/homebrew-nginx/blob/master/nginx-full.rb
+  option "with-passenger", "Compile with support for Phusion Passenger module"
+  option "with-webdav", "Compile with support for WebDAV module"
+  option "with-debug", "Compile with support for debug log"
+  option "with-spdy", "Compile with support for SPDY module"
+  option "with-gunzip", "Compile with support for gunzip module"
 
-  depends_on 'pcre'
-  depends_on 'passenger' => :optional
-  depends_on 'openssl'
-
-  def passenger_config_args
-    passenger_config = "#{HOMEBREW_PREFIX}/opt/passenger/bin/passenger-config"
-    nginx_ext = `#{passenger_config} --nginx-addon-dir`.chomp
-
-    if File.directory?(nginx_ext)
-      return "--add-module=#{nginx_ext}"
-    end
-
-    puts "Unable to install nginx with passenger support."
-    exit
-  end
+  depends_on "pcre"
+  depends_on "passenger" => :optional
+  depends_on "openssl"
 
   def install
     # Changes default port to 8080
-    inreplace 'conf/nginx.conf', 'listen       80;', 'listen       8080;'
+    inreplace "conf/nginx.conf", "listen       80;", "listen       8080;"
 
     pcre = Formula["pcre"]
     openssl = Formula["openssl"]
@@ -72,7 +62,11 @@ class Nginx < Formula
             "--with-http_gzip_static_module"
           ]
 
-    args << passenger_config_args if build.with? "passenger"
+    if build.with? "passenger"
+      nginx_ext = `#{Formula["passenger"].opt_bin}/passenger-config --nginx-addon-dir`.chomp
+      args << "--add-module=#{nginx_ext}"
+    end
+
     args << "--with-http_dav_module" if build.with? "webdav"
     args << "--with-debug" if build.with? "debug"
     args << "--with-http_spdy_module" if build.with? "spdy"
@@ -86,59 +80,59 @@ class Nginx < Formula
     system "make"
     system "make install"
     man8.install "objs/nginx.8"
-    (var/'run/nginx').mkpath
+    (var/"run/nginx").mkpath
+  end
 
+  def post_install
     # nginx's docroot is #{prefix}/html, this isn't useful, so we symlink it
     # to #{HOMEBREW_PREFIX}/var/www. The reason we symlink instead of patching
     # is so the user can redirect it easily to something else if they choose.
-    prefix.cd do
-      dst = HOMEBREW_PREFIX/"var/www"
-      if not dst.exist?
-        dst.dirname.mkpath
-        mv "html", dst
-      else
-        rm_rf "html"
-        dst.mkpath
-      end
-      Pathname.new("#{prefix}/html").make_relative_symlink(dst)
+    html = prefix/"html"
+    dst  = var/"www"
+
+    if dst.exist?
+      html.rmtree
+      dst.mkpath
+    else
+      dst.dirname.mkpath
+      html.rename(dst)
     end
+
+    prefix.install_symlink dst => "html"
 
     # for most of this formula's life the binary has been placed in sbin
     # and Homebrew used to suggest the user copy the plist for nginx to their
     # ~/Library/LaunchAgents directory. So we need to have a symlink there
     # for such cases
-    if (HOMEBREW_CELLAR/'nginx').subdirs.any?{|d| (d/:sbin).directory? }
-      sbin.mkpath
-      sbin.cd do
-        (sbin/'nginx').make_relative_symlink(bin/'nginx')
-      end
+    if rack.subdirs.any? { |d| d.join("sbin").directory? }
+      sbin.install_symlink bin/"nginx"
     end
   end
 
   test do
-    system "#{bin}/nginx", '-t'
+    system "#{bin}/nginx", "-t"
   end
 
   def passenger_caveats; <<-EOS.undent
 
-    To activate Phusion Passenger, add this to #{etc}/nginx/nginx.conf:
-      passenger_root #{HOMEBREW_PREFIX}/opt/passenger/libexec/lib/phusion_passenger/locations.ini
-      passenger_ruby /usr/bin/ruby
+    To activate Phusion Passenger, add this to #{etc}/nginx/nginx.conf, inside the 'http' context:
+      passenger_root #{Formula["passenger"].opt_libexec}/lib/phusion_passenger/locations.ini;
+      passenger_ruby /usr/bin/ruby;
     EOS
   end
 
   def caveats
     s = <<-EOS.undent
-    Docroot is: #{HOMEBREW_PREFIX}/var/www
+    Docroot is: #{var}/www
 
-    The default port has been set in #{HOMEBREW_PREFIX}/etc/nginx/nginx.conf to 8080 so that
+    The default port has been set in #{etc}/nginx/nginx.conf to 8080 so that
     nginx can run without sudo.
     EOS
-    s << passenger_caveats if build.with? 'passenger'
+    s << passenger_caveats if build.with? "passenger"
     s
   end
 
-  plist_options :manual => 'nginx'
+  plist_options :manual => "nginx"
 
   def plist; <<-EOS.undent
     <?xml version="1.0" encoding="UTF-8"?>

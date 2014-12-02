@@ -4,16 +4,17 @@ class Ghostscript < Formula
   homepage 'http://www.ghostscript.com/'
 
   stable do
-    url 'http://downloads.ghostscript.com/public/ghostscript-9.10.tar.gz'
-    sha1 '29d6538ae77565c09f399b06455e94e7bcd83d01'
+    url 'http://downloads.ghostscript.com/public/ghostscript-9.15.tar.gz'
+    sha1 'f53bcc47e912c7bffc2ced62ed9311376fb18bab'
 
     patch :DATA # Uncomment OS X-specific make vars
   end
 
   bottle do
-    sha1 "be9d9be82c03ac8409994fee0cc638d20ceb145c" => :mavericks
-    sha1 "667bbb27e64fee6d46da07c98205a6daf51a28ad" => :mountain_lion
-    sha1 "fb6e8756db2016f88eeb23ed392a9742096efef3" => :lion
+    revision 3
+    sha1 "64527567402bb0e06bd3cd2bd1999d3bd3ea09ad" => :yosemite
+    sha1 "bd885778fee5126a4f2b7bc27ea70e312668c430" => :mavericks
+    sha1 "41d1130888b464aa27cf46ae4266a517d17d64cb" => :mountain_lion
   end
 
   head do
@@ -23,9 +24,9 @@ class Ghostscript < Formula
       url 'git://git.code.sf.net/p/djvu/gsdjvu-git'
     end
 
-    depends_on :autoconf
-    depends_on :automake
-    depends_on :libtool
+    depends_on "autoconf" => :build
+    depends_on "automake" => :build
+    depends_on "libtool" => :build
 
     # Uncomment OS X-specific make vars
     patch do
@@ -41,10 +42,10 @@ class Ghostscript < Formula
   depends_on 'libtiff'
   depends_on 'jbig2dec'
   depends_on 'little-cms2'
-  depends_on :libpng
+  depends_on 'libpng'
   depends_on :x11 => ['2.7.2', :optional]
   depends_on 'djvulibre' if build.with? 'djvu'
-  depends_on 'freetype' if MacOS.version == :snow_leopard
+  depends_on 'freetype'
 
   conflicts_with 'gambit-scheme', :because => 'both install `gsc` binaries'
 
@@ -56,15 +57,15 @@ class Ghostscript < Formula
 
   # http://djvu.sourceforge.net/gsdjvu.html
   resource 'djvu' do
-    url 'https://downloads.sourceforge.net/project/djvu/GSDjVu/1.5/gsdjvu-1.5.tar.gz'
-    sha1 'c7d0677dae5fe644cf3d714c04b3c2c343906342'
+    url 'https://downloads.sourceforge.net/project/djvu/GSDjVu/1.6/gsdjvu-1.6.tar.gz'
+    sha1 'a8c5520d698d8be558a1957b4e5108cba68822ef'
   end
 
   def move_included_source_copies
     # If the install version of any of these doesn't match
     # the version included in ghostscript, we get errors
     # Taken from the MacPorts portfile - http://bit.ly/ghostscript-portfile
-    renames = %w{freetype jbig2dec jpeg libpng tiff zlib}
+    renames = %w{freetype jbig2dec jpeg libpng tiff}
     renames.each { |lib| mv lib, "#{lib}_local" }
   end
 
@@ -72,11 +73,11 @@ class Ghostscript < Formula
     src_dir = build.head? ? "gs" : "."
 
     resource('djvu').stage do
-      inreplace 'gdevdjvu.c', /#include "gserror.h"/, ''
-      (buildpath+'base').install 'gdevdjvu.c'
+      inreplace 'gsdjvu.mak', '$(GL', '$(DEV'
+      (buildpath+'devices').install 'gdevdjvu.c'
       (buildpath+'lib').install 'ps2utf8.ps'
       ENV['EXTRA_INIT_FILES'] = 'ps2utf8.ps'
-      (buildpath/'base/contrib.mak').open('a') { |f| f.write(File.read('gsdjvu.mak')) }
+      (buildpath/'devices/contrib.mak').open('a') { |f| f.write(File.read('gsdjvu.mak')) }
     end if build.with? 'djvu'
 
     cd src_dir do

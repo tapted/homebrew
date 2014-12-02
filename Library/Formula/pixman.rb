@@ -1,18 +1,19 @@
-require 'formula'
+require "formula"
 
 class Pixman < Formula
-  homepage 'http://cairographics.org/'
-  url 'http://cairographics.org/releases/pixman-0.32.4.tar.gz'
-  sha256 '80c7ed420e8a3ae749800241e6347c3d55681296cab71384be7969cd9e657e84'
+  homepage "http://cairographics.org/"
+  url "http://cairographics.org/releases/pixman-0.32.6.tar.gz"
+  sha256 "3dfed13b8060eadabf0a4945c7045b7793cc7e3e910e748a8bb0f0dc3e794904"
 
   bottle do
     cellar :any
-    sha1 "d4a8df1a31807a916a7d9b457a3835190494f9b1" => :mavericks
-    sha1 "d0b49f5a7a456a8491ec0d4a59113ec89b99bc4e" => :mountain_lion
-    sha1 "fd40b113d86707cab39c3e078c8eddf7db968560" => :lion
+    revision 1
+    sha1 "8f47ec83a3ce8bf6bf41676b3143286c8dbb85bd" => :yosemite
+    sha1 "9670f838299329540839e49026849db0f394f261" => :mavericks
+    sha1 "9012f57f5b65b3f1a3dfec6b91be7f66e955a3e4" => :mountain_lion
   end
 
-  depends_on 'pkg-config' => :build
+  depends_on "pkg-config" => :build
 
   keg_only :provided_pre_mountain_lion
 
@@ -30,14 +31,10 @@ class Pixman < Formula
   def install
     ENV.universal_binary if build.universal?
 
-    # Disable gtk as it is only used to build tests
-    args = %W[--disable-dependency-tracking
-              --disable-gtk
-              --prefix=#{prefix}]
-
-    args << "--disable-mmx" if ENV.compiler == :clang
-
-    system "./configure", *args
-    system "make install"
+    system "./configure", "--disable-dependency-tracking",
+                          "--disable-silent-rules",
+                          "--prefix=#{prefix}",
+                          "--disable-gtk"
+    system "make", "install"
   end
 end

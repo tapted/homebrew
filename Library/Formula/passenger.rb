@@ -2,25 +2,28 @@ require 'formula'
 
 class Passenger < Formula
   homepage 'https://www.phusionpassenger.com/'
-  url 'http://s3.amazonaws.com/phusion-passenger/releases/passenger-4.0.38.tar.gz'
-  sha1 'c1e80c27b3f1c43d91dbd239ddecd4b81e6c13bd'
+  url 'http://s3.amazonaws.com/phusion-passenger/releases/passenger-4.0.53.tar.gz'
+  sha1 'dce2a83e66abb1fac1cd3cdc2ef284f098bc9390'
   head 'https://github.com/phusion/passenger.git'
 
   bottle do
-    sha1 "363ea4bcfede79fcc2eb13eb13d7110ba6fb15ce" => :mavericks
-    sha1 "1a85e572065bdf3eaa2bc16dc0db615b220c81be" => :mountain_lion
-    sha1 "8b14e945b72d4de6c9866041fb6ecf9e37a9b4ae" => :lion
+    sha1 "c24320e2f139f7ba3c63b7e5443b9167e50ff527" => :mavericks
+    sha1 "a04e5acf5671738c8466548bcd51c5f69d96a554" => :mountain_lion
+    sha1 "7158b7d6cca6a9be67861db8b455c58ca5d83f62" => :lion
   end
 
   depends_on 'pcre'
+  depends_on "openssl"
   depends_on :macos => :lion
 
+  option 'without-apache2-module', 'Disable Apache2 module'
+
   def install
-    rake "apache2"
+    rake "apache2" if build.with? "apache2-module"
     rake "nginx"
     rake "webhelper"
 
-    necessary_files = Dir["configure", "Rakefile", "README.md", "CONTRIBUTORS",
+    necessary_files = Dir[".editorconfig", "configure", "Rakefile", "README.md", "CONTRIBUTORS",
       "CONTRIBUTING.md", "LICENSE", "CHANGELOG", "INSTALL.md",
       "passenger.gemspec", "build", "lib", "node_lib", "bin", "doc", "man",
       "helper-scripts", "ext", "resources", "buildout"]
@@ -28,11 +31,7 @@ class Passenger < Formula
     cp_r necessary_files, libexec, :preserve => true
 
     # Allow Homebrew to create symlinks for the Phusion Passenger commands.
-    bin.mkpath
-    Dir[libexec/"bin/*"].each do |orig_script|
-      name = File.basename(orig_script)
-      ln_s orig_script, bin/name
-    end
+    bin.install_symlink Dir["#{libexec}/bin/*"]
 
     # Ensure that the Phusion Passenger commands can always find their library
     # files.
@@ -47,15 +46,21 @@ class Passenger < Formula
     mv libexec/'man', share
   end
 
-  def caveats; <<-EOS.undent
-    To activate Phusion Passenger for Apache, create /etc/apache2/other/passenger.conf:
-      LoadModule passenger_module #{opt_libexec}/buildout/apache2/mod_passenger.so
-      PassengerRoot #{opt_libexec}/lib/phusion_passenger/locations.ini
-      PassengerDefaultRuby /usr/bin/ruby
+  def caveats
+    s = <<-EOS.undent
+      To activate Phusion Passenger for Nginx, run:
+        brew install nginx --with-passenger
 
-    To activate Phusion Passenger for Nginx, run:
-      brew install nginx --with-passenger
-    EOS
+      EOS
+
+    s += <<-EOS.undent if build.with? "apache2-module"
+      To activate Phusion Passenger for Apache, create /etc/apache2/other/passenger.conf:
+        LoadModule passenger_module #{opt_libexec}/buildout/apache2/mod_passenger.so
+        PassengerRoot #{opt_libexec}/lib/phusion_passenger/locations.ini
+        PassengerDefaultRuby /usr/bin/ruby
+
+      EOS
+    s
   end
 
   test do

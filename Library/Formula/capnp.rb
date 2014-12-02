@@ -1,33 +1,29 @@
-require 'formula'
+require "formula"
 
 class Capnp < Formula
-  homepage 'http://kentonv.github.io/capnproto/'
-  url 'http://capnproto.org/capnproto-c++-0.4.0.tar.gz'
-  sha1 '1d356a0229a9c6b3665930a4b166b91cba03825b'
+  homepage "http://kentonv.github.io/capnproto/"
+  url "http://capnproto.org/capnproto-c++-0.4.1.tar.gz"
+  sha1 "18ce1a404c2bf68e6625e44927bfe6b67186cb15"
 
-  # TODO add fails_with statements for FSF GCC
-  fails_with :gcc do
-    cause "Cap'n Proto requires C++11 support"
+  bottle do
+    cellar :any
+    sha1 "e980920f619a0682b1335550844b065894ed43ac" => :yosemite
+    sha1 "37a57c4a451723d7aa63dce453d35c65dce38a6e" => :mavericks
+    sha1 "8d7cc81fe1e7356eea9b422cc59ecbb1cef8f808" => :mountain_lion
   end
 
-  fails_with :gcc_4_0 do
-    cause "Cap'n Proto requires C++11 support"
-  end
-
-  fails_with :clang do
-    build 425
-    cause "Clang 3.2 or newer is required to build Cap'n Proto"
-  end
-
-  fails_with :llvm do
-    cause "Cap'n Proto requires C++11 support"
-  end
+  needs :cxx11
+  option "without-shared", "Disable building shared library variant"
 
   def install
-    system "./configure", "--disable-debug",
-                          "--disable-dependency-tracking",
-                          "--disable-silent-rules",
-                          "--prefix=#{prefix}"
+    args = ["--disable-debug",
+            "--disable-dependency-tracking",
+            "--disable-silent-rules",
+            "--prefix=#{prefix}"]
+
+    args << "--disable-shared" if build.without? "shared"
+
+    system "./configure", *args
     system "make", "check"
     system "make", "install"
   end

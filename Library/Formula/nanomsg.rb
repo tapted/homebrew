@@ -2,14 +2,22 @@ require 'formula'
 
 class Nanomsg < Formula
   homepage 'http://nanomsg.org'
-  url 'http://download.nanomsg.org/nanomsg-0.3-beta.tar.gz'
-  sha1 '3ca5a9655a96bb3194648b0ab7530d15e0afdbae'
+  url 'http://download.nanomsg.org/nanomsg-0.5-beta.tar.gz'
+  sha1 '2826bf58fe29550777dbe610e12ed20d386a6974'
+
+  bottle do
+    cellar :any
+    sha1 "3a645be193f896f1a3b4f8593c1554656abdc4c1" => :yosemite
+    sha1 "874eb890390defb22b89cbf4303d218d384bd9b6" => :mavericks
+    sha1 "66775cd465f4351a92cb05824e279ed597b90270" => :mountain_lion
+  end
 
   head do
     url 'https://github.com/nanomsg/nanomsg.git'
 
-    depends_on :autoconf
-    depends_on :automake
+    depends_on "autoconf" => :build
+    depends_on "automake" => :build
+    depends_on "libtool" => :build
   end
 
   option 'with-test', 'Verify the build with make check'
@@ -17,8 +25,7 @@ class Nanomsg < Formula
   option 'without-nanocat', 'Do not install nanocat tool'
   option 'with-debug', 'Compile with debug symbols'
 
-  depends_on 'pkg-config'=> :build
-  depends_on :libtool
+  depends_on 'pkg-config' => :build
 
   if build.with? 'doc'
     depends_on 'asciidoc' => :build

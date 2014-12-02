@@ -2,8 +2,15 @@ require 'formula'
 
 class Lighttpd < Formula
   homepage 'http://www.lighttpd.net/'
-  url 'http://download.lighttpd.net/lighttpd/releases-1.4.x/lighttpd-1.4.34.tar.bz2'
-  sha256 'e4b5682ef21b0bdea4a18dc7ccac6b5a0bf526b691ad0fe5c25c8b9fc38d0c12'
+  url 'http://download.lighttpd.net/lighttpd/releases-1.4.x/lighttpd-1.4.35.tar.bz2'
+  sha256 '4a71c1f6d8af41ed894b507720c4c17184dc320590013881d5170ca7f15c5bf7'
+  revision 1
+
+  bottle do
+    sha1 "1e1149e3cd4a622a4d90e2e0243ee43ee6900b05" => :mavericks
+    sha1 "9005df016564ac3cf44757f14dab8d0ae98eec49" => :mountain_lion
+    sha1 "0dc5abe30f67397f4d0dcf0b04bbed96b8b23173" => :lion
+  end
 
   option 'with-lua', 'Include Lua scripting support for mod_magnet'
 
@@ -12,7 +19,7 @@ class Lighttpd < Formula
   depends_on 'automake' => :build
   depends_on 'libtool' => :build
   depends_on 'pcre'
-  depends_on 'lua' => :optional
+  depends_on 'lua51' if build.with? "lua"
   depends_on 'libev' => :optional
 
   # default max. file descriptors; this option will be ignored if the server is not started as root
@@ -27,6 +34,7 @@ class Lighttpd < Formula
     args = %W[
       --disable-dependency-tracking
       --prefix=#{prefix}
+      --sbindir=#{bin}
       --with-openssl
       --with-ldap
       --with-zlib
@@ -46,11 +54,8 @@ class Lighttpd < Formula
     system "./configure", *args
     system "make install"
 
-    mv sbin, bin
-
     unless File.exist? config_path
-      config_path.install Dir["doc/config/lighttpd.conf"]
-      config_path.install Dir["doc/config/modules.conf"]
+      config_path.install "doc/config/lighttpd.conf", "doc/config/modules.conf"
       (config_path/"conf.d/").install Dir["doc/config/conf.d/*.conf"]
       inreplace config_path+"lighttpd.conf" do |s|
         s.sub!(/^var\.log_root\s*=\s*".+"$/,"var.log_root    = \"#{log_path}\"")
@@ -59,7 +64,7 @@ class Lighttpd < Formula
         s.sub!(/^var\.home_dir\s*=\s*".+"$/,"var.home_dir    = \"#{run_path}\"")
         s.sub!(/^var\.conf_dir\s*=\s*".+"$/,"var.conf_dir    = \"#{config_path}\"")
         s.sub!(/^server\.port\s*=\s*80$/,'server.port = 8080')
-        s.sub!(/^server\.document-root\s*=\s*server_root + "\/htdocs"$/,'server.document-root = server_root')
+        s.sub!(/^server\.document-root\s*=\s*server_root \+ "\/htdocs"$/,'server.document-root = server_root')
 
         # get rid of "warning: please use server.use-ipv6 only for hostnames, not
         # without server.bind / empty address; your config will break if the kernel

@@ -7,9 +7,10 @@ class Libsamplerate < Formula
 
   bottle do
     cellar :any
-    sha1 "d235c9d703076fc7021d7663a09ca2ffa496a190" => :mavericks
-    sha1 "3a59f5ae0cbcfdd5501d98e7bd418b3564cd46c3" => :mountain_lion
-    sha1 "a25e2123024d74546dce54994b1adf3e81ec6dd3" => :lion
+    revision 1
+    sha1 "7bdee60fa49e368546369cafdbff37a772970492" => :yosemite
+    sha1 "a60d3e18f126fe69826cd8e4ab9944574e1ac9b6" => :mavericks
+    sha1 "64fd25bc4134aa6f3d3d463892c662e0e73bc333" => :mountain_lion
   end
 
   depends_on 'pkg-config' => :build
@@ -19,7 +20,7 @@ class Libsamplerate < Formula
   # configure adds `/Developer/Headers/FlatCarbon` to the include, but this is
   # very deprecated. Correct the use of Carbon.h to the non-flat location.
   # See: https://github.com/Homebrew/homebrew/pull/10875
-  def patches; DATA; end
+  patch :DATA
 
   def install
     system "./configure", "--disable-dependency-tracking",

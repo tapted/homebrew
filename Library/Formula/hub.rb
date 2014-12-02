@@ -2,16 +2,23 @@ require 'formula'
 
 class Hub < Formula
   homepage 'http://hub.github.com/'
-  url 'https://github.com/github/hub/archive/v1.12.0.tar.gz'
-  sha1 '195b7c92b49286623baa4d01ab53b8a898b484a2'
-  head 'https://github.com/github/hub.git'
+  url 'https://github.com/github/hub/archive/v1.12.2.tar.gz'
+  sha1 '65359d3dcc8e1a0986aab3726f6047bfb9df3d7c'
+
+  head do
+    url "https://github.com/github/hub.git", :branch => "master"
+    depends_on "go" => :build
+  end
 
   option 'without-completions', 'Disable bash/zsh completions'
 
   def install
-    ENV['GIT_DIR'] = cached_download/'.git' if build.head?
-
-    rake "install", "prefix=#{prefix}"
+    if build.head?
+      system "script/build"
+      bin.install "hub"
+    else
+      rake "install", "prefix=#{prefix}"
+    end
 
     if build.with? 'completions'
       bash_completion.install 'etc/hub.bash_completion.sh'
@@ -21,7 +28,7 @@ class Hub < Formula
 
   test do
     HOMEBREW_REPOSITORY.cd do
-      assert_equal 'bin/brew', `#{bin}/hub ls-files -- bin`.strip
+      assert_equal "bin/brew", shell_output("#{bin}/hub ls-files -- bin").strip
     end
   end
 end

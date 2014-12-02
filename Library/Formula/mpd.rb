@@ -2,8 +2,17 @@ require 'formula'
 
 class Mpd < Formula
   homepage "http://www.musicpd.org/"
-  url "http://www.musicpd.org/download/mpd/0.17/mpd-0.17.5.tar.bz2"
-  sha1 "91e4d8d364a3db02e6f92676dd938880e5bb200a"
+
+  stable do
+    url "http://www.musicpd.org/download/mpd/0.19/mpd-0.19.5.tar.xz"
+    sha1 "59bab61cfc89c6ef7a1c3cbc877957df633ad1ac"
+  end
+
+  bottle do
+    sha1 "b620a3d05f8359c42ce7a0f743537da74607db8a" => :yosemite
+    sha1 "8b4ff95ed536112b0411461cbdee5143a9384934" => :mavericks
+    sha1 "5eeddc4249cebfc84f1a0c7b3f1b51208aef3263" => :mountain_lion
+  end
 
   head do
     url "git://git.musicpd.org/master/mpd.git"
@@ -16,20 +25,23 @@ class Mpd < Formula
   option "with-lame", "Build with lame support (for MP3 encoding when streaming)"
   option "with-two-lame", "Build with two-lame support (for MP2 encoding when streaming)"
   option "with-flac", "Build with flac support (for Flac encoding when streaming)"
-  option "with-vorbis", "Build with vorbis support (for Ogg encoding)"
+  option "with-libvorbis", "Build with vorbis support (for Ogg encoding)"
   option "with-yajl", "Build with yajl support (for playing from soundcloud)"
-  if MacOS.version < :lion
-    option "with-libwrap", "Build with libwrap (TCP Wrappers) support"
-  elsif MacOS.version == :lion
-    option "with-libwrap", "Build with libwrap (TCP Wrappers) support (buggy)"
-  end
+  option "with-opus", "Build with opus support (for Opus encoding and decoding)"
+
+  deprecated_option "with-vorbis" => "with-libvorbis"
 
   depends_on "pkg-config" => :build
+  depends_on "boost" => :build
   depends_on "glib"
   depends_on "libid3tag"
   depends_on "sqlite"
   depends_on "libsamplerate"
+  depends_on "icu4c"
 
+  needs :cxx11
+
+  depends_on "libmpdclient"
   depends_on "ffmpeg"                   # lots of codecs
   # mpd also supports mad, mpg123, libsndfile, and audiofile, but those are
   # redundant with ffmpeg
@@ -44,23 +56,14 @@ class Mpd < Formula
   depends_on "libmms" => :optional      # MMS input
   depends_on "libzzip" => :optional     # Reading from within ZIPs
   depends_on "yajl" => :optional        # JSON library for SoundCloud
-
-  depends_on "libvorbis" if build.with? "vorbis" # Vorbis support
-
-  # Removes usage of deprecated AVCODEC_MAX_AUDIO_FRAME_SIZE constant
-  # We're many versions behind; this bug has long since been fixed upstream
-  def patches; DATA unless build.head?; end
+  depends_on "opus" => :optional        # Opus support
+  depends_on "libvorbis" => :optional
 
   def install
-    if build.include? "lastfm" or build.include? "libwrap" \
-       or build.include? "enable-soundcloud"
-      opoo "You are using an option that has been replaced."
-      opoo "See this formula's caveats for details."
-    end
-
-    if build.with? "libwrap" and MacOS.version > :lion
-      opoo "Ignoring --with-libwrap: TCP Wrappers were removed in OSX 10.8"
-    end
+    # mpd specifies -std=gnu++0x, but clang appears to try to build
+    # that against libstdc++ anyway, which won't work.
+    # The build is fine with G++.
+    ENV.libcxx
 
     system "./autogen.sh" if build.head?
 
@@ -71,57 +74,47 @@ class Mpd < Formula
       --enable-bzip2
       --enable-ffmpeg
       --enable-fluidsynth
+      --enable-osx
+      --disable-libwrap
     ]
 
     args << "--disable-mad"
     args << "--disable-curl" if MacOS.version <= :leopard
 
-    args << "--with-faad=#{Formula["faad2"].opt_prefix}"
     args << "--enable-zzip" if build.with? "libzzip"
     args << "--enable-lastfm" if build.with? "lastfm"
-    args << "--disable-libwrap" if build.without? "libwrap"
     args << "--disable-lame-encoder" if build.without? "lame"
     args << "--disable-soundcloud" if build.without? "yajl"
-    args << "--enable-vorbis-encoder" if build.with? "vorbis"
+    args << "--enable-vorbis-encoder" if build.with? "libvorbis"
 
     system "./configure", *args
     system "make"
-    ENV.j1 # Directories are created in parallel, so let"s not do that
+    ENV.j1 # Directories are created in parallel, so let's not do that
     system "make install"
   end
 
-  def caveats
-    <<-EOS
-      As of mpd-0.17.4, this formula no longer enables support for streaming
-      output by default. If you want streaming output, you must now specify
-      the --with-libshout, --with-lame, --with-twolame, and/or --with-flac
-      options explicitly. (Use '--with-libshout --with-lame --with-flac' for
-      the pre-0.17.4 behavior.)
+  plist_options :manual => "mpd"
 
-      As of mpd-0.17.4, this formula has renamed options as follows:
-        --lastfm            -> --with-lastfm
-        --libwrap           -> --with-libwrap (unsupported in OSX >= 10.8)
-        --enable-soundcloud -> --with-yajl
+  def plist; <<-EOS.undent
+    <?xml version="1.0" encoding="UTF-8"?>
+    <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+    <plist version="1.0">
+    <dict>
+        <key>Label</key>
+        <string>#{plist_name}</string>
+        <key>WorkingDirectory</key>
+        <string>#{HOMEBREW_PREFIX}</string>
+        <key>ProgramArguments</key>
+        <array>
+            <string>#{opt_bin}/mpd</string>
+            <string>--no-daemon</string>
+        </array>
+        <key>RunAtLoad</key>
+        <true/>
+        <key>KeepAlive</key>
+        <true/>
+    </dict>
+    </plist>
     EOS
   end
 end
-
-__END__
-diff --git a/src/decoder/ffmpeg_decoder_plugin.c b/src/decoder/ffmpeg_decoder_plugin.c
-index 58bd2f5..65aa37f 100644
---- a/src/decoder/ffmpeg_decoder_plugin.c
-+++ b/src/decoder/ffmpeg_decoder_plugin.c
-@@ -299,11 +299,11 @@ ffmpeg_send_packet(struct decoder *decoder, struct input_stream *is,
- #endif
- 
- #if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(53,25,0)
--	uint8_t aligned_buffer[(AVCODEC_MAX_AUDIO_FRAME_SIZE * 3) / 2 + 16];
-+	uint8_t aligned_buffer[(192000 * 3) / 2 + 16];
- 	const size_t buffer_size = sizeof(aligned_buffer);
- #else
- 	/* libavcodec < 0.8 needs an aligned buffer */
--	uint8_t audio_buf[(AVCODEC_MAX_AUDIO_FRAME_SIZE * 3) / 2 + 16];
-+	uint8_t audio_buf[(192000 * 3) / 2 + 16];
- 	size_t buffer_size = sizeof(audio_buf);
- 	int16_t *aligned_buffer = align16(audio_buf, &buffer_size);
- #endif

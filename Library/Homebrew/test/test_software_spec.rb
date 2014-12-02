@@ -1,17 +1,14 @@
 require 'testing_env'
 require 'software_spec'
-require 'bottles'
 
-class SoftwareSpecTests < Test::Unit::TestCase
-  include VersionAssertions
-
+class SoftwareSpecTests < Homebrew::TestCase
   def setup
     @spec = SoftwareSpec.new
   end
 
   def test_resource
     @spec.resource('foo') { url 'foo-1.0' }
-    assert @spec.resource?('foo')
+    assert @spec.resource_defined?("foo")
   end
 
   def test_raises_when_duplicate_resources_are_defined
@@ -22,6 +19,7 @@ class SoftwareSpecTests < Test::Unit::TestCase
   end
 
   def test_raises_when_accessing_missing_resources
+    @spec.owner = Class.new { def name; "test"; end }.new
     assert_raises(ResourceMissingError) { @spec.resource('foo') }
   end
 
@@ -47,20 +45,50 @@ class SoftwareSpecTests < Test::Unit::TestCase
 
   def test_option
     @spec.option('foo')
-    assert @spec.build.has_option? 'foo'
+    assert @spec.option_defined?("foo")
   end
 
   def test_option_raises_when_begins_with_dashes
-    assert_raises(RuntimeError) { @spec.option('--foo') }
+    assert_raises(ArgumentError) { @spec.option("--foo") }
   end
 
   def test_option_raises_when_name_empty
-    assert_raises(RuntimeError) { @spec.option('') }
+    assert_raises(ArgumentError) { @spec.option("") }
   end
 
-  def test_option_accepts_symbols
-    @spec.option(:foo)
-    assert @spec.build.has_option? 'foo'
+  def test_cxx11_option_special_case
+    @spec.option(:cxx11)
+    assert @spec.option_defined?("c++11")
+    refute @spec.option_defined?("cxx11")
+  end
+
+  def test_option_description
+    @spec.option("bar", "description")
+    assert_equal "description", @spec.options.first.description
+  end
+
+  def test_option_description_defaults_to_empty_string
+    @spec.option("foo")
+    assert_equal "", @spec.options.first.description
+  end
+
+  def test_deprecated_option
+    @spec.deprecated_option('foo' => 'bar')
+    refute_empty @spec.deprecated_options
+    assert_equal "foo", @spec.deprecated_options.first.old
+    assert_equal "bar", @spec.deprecated_options.first.current
+  end
+
+  def test_deprecated_options
+    @spec.deprecated_option(['foo1', 'foo2'] => 'bar1', 'foo3' => ['bar2', 'bar3'])
+    assert_includes @spec.deprecated_options, DeprecatedOption.new("foo1", "bar1")
+    assert_includes @spec.deprecated_options, DeprecatedOption.new("foo2", "bar1")
+    assert_includes @spec.deprecated_options, DeprecatedOption.new("foo3", "bar2")
+    assert_includes @spec.deprecated_options, DeprecatedOption.new("foo3", "bar3")
+  end
+
+  def test_deprecated_option_raises_when_empty
+    assert_raises(ArgumentError) { @spec.deprecated_option({}) }
   end
 
   def test_depends_on
@@ -71,14 +99,14 @@ class SoftwareSpecTests < Test::Unit::TestCase
   def test_dependency_option_integration
     @spec.depends_on 'foo' => :optional
     @spec.depends_on 'bar' => :recommended
-    assert @spec.build.has_option?('with-foo')
-    assert @spec.build.has_option?('without-bar')
+    assert @spec.option_defined?("with-foo")
+    assert @spec.option_defined?("without-bar")
   end
 
   def test_explicit_options_override_default_dep_option_description
     @spec.option('with-foo', 'blah')
     @spec.depends_on('foo' => :optional)
-    assert_equal 'blah', @spec.build.first.description
+    assert_equal "blah", @spec.options.first.description
   end
 
   def test_patch
@@ -88,9 +116,7 @@ class SoftwareSpecTests < Test::Unit::TestCase
   end
 end
 
-class HeadSoftwareSpecTests < Test::Unit::TestCase
-  include VersionAssertions
-
+class HeadSoftwareSpecTests < Homebrew::TestCase
   def setup
     @spec = HeadSoftwareSpec.new
   end
@@ -104,7 +130,7 @@ class HeadSoftwareSpecTests < Test::Unit::TestCase
   end
 end
 
-class BottleSpecificationTests < Test::Unit::TestCase
+class BottleSpecificationTests < Homebrew::TestCase
   def setup
     @spec = BottleSpecification.new
   end
@@ -122,8 +148,8 @@ class BottleSpecificationTests < Test::Unit::TestCase
     end
 
     checksums.each_pair do |cat, sha1|
-      hsh, _ = @spec.instance_variable_get(:@sha1).fetch_bottle_for(cat)
-      assert_equal Checksum.new(:sha1, sha1), hsh
+      checksum, _ = @spec.checksum_for(cat)
+      assert_equal Checksum.new(:sha1, sha1), checksum
     end
   end
 

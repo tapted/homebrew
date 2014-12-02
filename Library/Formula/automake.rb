@@ -7,17 +7,15 @@ class Automake < Formula
   sha1 '0bb1714b78d70cab9907d2013082978a28f48a46'
 
   bottle do
+    sha1 "b7f153654e9a99194f13a8da140b3d861f046af0" => :yosemite
     sha1 '8720e073a828e5b7e29e5cacd01b3ccca88a6d40' => :mavericks
     sha1 'ed3cba7f2a806a4192e875e809bb73b65a128757' => :mountain_lion
     sha1 '12d0d7d3b6d31ea4faf9551076225343e9a5af1f' => :lion
   end
 
-  # Always needs a newer autoconf, even on Snow Leopard.
   depends_on 'autoconf' => :run
 
-  if MacOS::Xcode.provides_autotools? or File.file? "/usr/bin/automake"
-    keg_only "Xcode (up to and including 4.2) provides (a rather old) Automake."
-  end
+  keg_only :provided_until_xcode43
 
   def install
     ENV['PERL'] = '/usr/bin/perl'

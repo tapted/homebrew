@@ -1,18 +1,28 @@
-require 'formula'
+require "formula"
 
 class Libsass < Formula
-  homepage 'https://github.com/hcatlin/libsass'
-  url 'https://github.com/hcatlin/libsass/archive/v1.0.1.tar.gz'
-  sha1 '9524e028bc8ebe84e36895269d07ecc7db496c7c'
+  homepage "https://github.com/sass/libsass"
+  url "https://github.com/sass/libsass/archive/3.0.2.tar.gz"
+  sha1 "415e4377ec73fcf0bd7af949d65f7ca730be1e5c"
 
-  depends_on :autoconf
-  depends_on :automake
-  depends_on :libtool
+  bottle do
+    cellar :any
+    sha1 "88f00899fb612aabe04a324cfc83bcf025aeb47e" => :yosemite
+    sha1 "6e0616f8296f687f8efdcbf4ddc66527a9676a25" => :mavericks
+    sha1 "d435e14e0a8a3886ba9dc301aed4db4baceb9fe6" => :mountain_lion
+  end
+
+  depends_on "autoconf" => :build
+  depends_on "automake" => :build
+  depends_on "libtool" => :build
+  needs :cxx11
 
   def install
-    system "autoreconf -i"
-    system "./configure", "--prefix=#{prefix}"
-    system "make install"
+    ENV.cxx11
+    system "autoreconf", "-fvi"
+    system "./configure", "--prefix=#{prefix}", "--disable-silent-rules",
+                          "--disable-dependency-tracking"
+    system "make", "install"
   end
 
   test do

@@ -6,16 +6,13 @@ class W3m < Formula
   sha1 '444b6c8cf7094ee95f8e9de96b37f814b9d83237'
 
   depends_on 'bdw-gc'
+  depends_on 'openssl'
 
   fails_with :llvm do
     build 2334
   end
 
-  def patches
-    # patch to build against bdw-gc 7.2 by @waltarix
-    # will be sent upstream
-    DATA
-  end
+  patch :DATA
 
   def install
     system "./configure", "--prefix=#{prefix}", "--disable-image"

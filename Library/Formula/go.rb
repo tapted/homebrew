@@ -3,15 +3,21 @@ require 'formula'
 class Go < Formula
   homepage 'http://golang.org'
   head 'https://go.googlecode.com/hg/'
-  url 'https://go.googlecode.com/files/go1.2.1.src.tar.gz'
-  version '1.2.1'
-  sha1 '6a4b9991eddd8039438438d6aa25126ab7e07f2f'
+  url 'https://storage.googleapis.com/golang/go1.3.3.src.tar.gz'
+  version '1.3.3'
+  sha1 'b54b7deb7b7afe9f5d9a3f5dd830c7dede35393a'
 
   bottle do
-    revision 1
-    sha1 "c9d4efb3c0597bcea12a5556c85199bc468cdffb" => :mavericks
-    sha1 "bff65b108ec15cb11c7a41afd2f57ce6a6f6029e" => :mountain_lion
-    sha1 "1c09d8aaac7d78b54405c39e5ede0ee9d927860f" => :lion
+    sha1 "07bde6154b7966acda1b6f147393f2deadc1af3f" => :yosemite
+    sha1 "87aa4f7f76278ee21004d0f12f63e38a0b3ff3f2" => :mavericks
+    sha1 "1e5fe0df8f805c96f143568bad1de5e2bc6af82f" => :mountain_lion
+    sha1 "2aa465d9fb98833b80d8f2801153592c1d52bd1a" => :lion
+  end
+
+  devel do
+    url 'https://storage.googleapis.com/golang/go1.4rc1.src.tar.gz'
+    version '1.4rc1'
+    sha1 'ff8e7d78e85658251a36e45f944af70f226368ab'
   end
 
   option 'cross-compile-all', "Build the cross-compilers and runtime support for all supported platforms"
@@ -19,18 +25,23 @@ class Go < Formula
   option 'without-cgo', "Build without cgo"
 
   def install
-    # install the completion scripts
-    bash_completion.install 'misc/bash/go' => 'go-completion.bash'
-    zsh_completion.install 'misc/zsh/go' => 'go'
+    unless build.devel?
+      # install the completion scripts
+      bash_completion.install 'misc/bash/go' => 'go-completion.bash'
+      zsh_completion.install 'misc/zsh/go' => '_go'
+    end
 
     # host platform (darwin) must come last in the targets list
     if build.include? 'cross-compile-all'
       targets = [
         ['linux',   ['386', 'amd64', 'arm']],
-        ['freebsd', ['386', 'amd64']],
-        ['netbsd',  ['386', 'amd64']],
+        ['freebsd', ['386', 'amd64', 'arm']],
+        ['netbsd',  ['386', 'amd64', 'arm']],
         ['openbsd', ['386', 'amd64']],
         ['windows', ['386', 'amd64']],
+        ['dragonfly', ['386', 'amd64']],
+        ['plan9',   ['386', 'amd64']],
+        ['solaris', ['amd64']],
         ['darwin',  ['386', 'amd64']],
       ]
     elsif build.include? 'cross-compile-common'
@@ -78,7 +89,7 @@ class Go < Formula
       go get code.google.com/p/go.tools/cmd/vet
 
     You may wish to add the GOROOT-based install location to your PATH:
-      export PATH=$PATH:#{libexec}/bin
+      export PATH=$PATH:#{opt_libexec}/bin
     EOS
   end
 

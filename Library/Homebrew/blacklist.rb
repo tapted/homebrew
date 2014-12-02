@@ -49,14 +49,6 @@ def blacklisted? name
     Installing gmock system-wide is not recommended; it should be vendored
     in your projects that use it.
     EOS
-  when 'gcc' then <<-EOS.undent
-    GCC is now maintained in homebrew-versions, with major version
-    number in formula name as suffix. Please tap using:
-
-        brew tap homebrew/versions
-
-    and then install GCC based on its version, e.g., 'brew install gcc47'.
-    EOS
   when 'sshpass' then <<-EOS.undent
     We won't add sshpass because it makes it too easy for novice SSH users to
     ruin SSH's security.
@@ -73,15 +65,29 @@ def blacklisted? name
     and then follow the tutorial:
       https://github.com/technomancy/leiningen/blob/stable/doc/TUTORIAL.md
     EOS
-  when 'rubinius' then <<-EOS.undent
-    Rubinius requires an existing Ruby 2.0 to bootstrap.
-    Doing this through Homebrew is error-prone. Instead, consider using
-    ruby-build` to build and install specific versions of Ruby:
-        brew install ruby-build
-    EOS
   when 'osmium' then <<-EOS.undent
     The creator of Osmium requests that it not be packaged and that people
     use the GitHub master branch instead.
+    EOS
+  when 'gfortran' then <<-EOS.undent
+    GNU Fortran is now provided as part of GCC, and can be installed with:
+      brew install gcc
+    EOS
+  when 'play' then <<-EOS.undent
+    Play 2.3 replaces the play command with activator:
+      brew install typesafe-activator
+
+    You can read more about this change at:
+      http://www.playframework.com/documentation/2.3.x/Migration23
+      http://www.playframework.com/documentation/2.3.x/Highlights23
+    EOS
+  when 'haskell-platform' then <<-EOS.undent
+    We no longer package haskell-platform. Consider installing ghc
+    and cabal-install instead:
+      brew install ghc cabal-install
+
+    A binary installer is available:
+      https://www.haskell.org/platform/mac.html
     EOS
   end
 end

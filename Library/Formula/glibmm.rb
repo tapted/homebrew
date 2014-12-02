@@ -1,19 +1,20 @@
-require 'formula'
+require "formula"
 
 class Glibmm < Formula
-  homepage 'http://www.gtkmm.org/'
-  url 'http://ftp.gnome.org/pub/GNOME/sources/glibmm/2.38/glibmm-2.38.1.tar.xz'
-  sha256 '49c925ee1d3c4d0d6cd7492d7173bd6826db51d0b55f458a6496406ae267c4a2'
+  homepage "http://www.gtkmm.org/"
+  url "http://ftp.gnome.org/pub/GNOME/sources/glibmm/2.42/glibmm-2.42.0.tar.xz"
+  sha256 "985083d97378d234da27a7243587cc0d186897a4b2d3c1286f794089be1a3397"
 
   bottle do
-    sha1 "b405d3bd887ab8268eafb7d01a7fcb32977a3f97" => :mavericks
-    sha1 "e1b2dc92316aa3c162149987e15bc34806c05248" => :mountain_lion
-    sha1 "a6155e561ab340ba24553ee953f74f917e7fca2c" => :lion
+    revision 1
+    sha1 "c4bb776154321f4a6f55533b656bbfd01fb5d0d0" => :yosemite
+    sha1 "91bcad6b5c2d5f5c7feb45297888ffd05c618e1b" => :mavericks
+    sha1 "2470f84fef26c7fccea181b549ddb9725dde0aba" => :mountain_lion
   end
 
-  depends_on 'pkg-config' => :build
-  depends_on 'libsigc++'
-  depends_on 'glib'
+  depends_on "pkg-config" => :build
+  depends_on "libsigc++"
+  depends_on "glib"
 
   def install
     system "./configure", "--disable-dependency-tracking", "--prefix=#{prefix}"

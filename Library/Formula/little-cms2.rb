@@ -2,14 +2,15 @@ require 'formula'
 
 class LittleCms2 < Formula
   homepage 'http://www.littlecms.com/'
-  url 'https://downloads.sourceforge.net/project/lcms/lcms/2.5/lcms2-2.5.tar.gz'
-  sha1 'bab3470471fc7756c5fbe71be9a3c7d677d2ee7b'
+  url 'https://downloads.sourceforge.net/project/lcms/lcms/2.6/lcms2-2.6.tar.gz'
+  sha1 'b0ecee5cb8391338e6c281d1c11dcae2bc22a5d2'
 
   bottle do
     cellar :any
-    sha1 "06ec67737332d592670109bac5547d42276557a0" => :mavericks
-    sha1 "57ef9368e594929537805df109031fbe799b3d8a" => :mountain_lion
-    sha1 "79aa4fcb97599f1902b70eebbf3acbbc9936f75e" => :lion
+    revision 1
+    sha1 "27bd10360d70c106a8d306871feb990af9df510e" => :yosemite
+    sha1 "c67762e471d15d9b84cbc16eaeaa514070c35b3f" => :mavericks
+    sha1 "ae3e7282b6e89f3b97ae07c7071674eb89556005" => :mountain_lion
   end
 
   depends_on 'jpeg' => :recommended

@@ -2,13 +2,13 @@ require 'formula'
 
 class Pv < Formula
   homepage 'http://www.ivarch.com/programs/pv.shtml'
-  url 'http://www.ivarch.com/programs/sources/pv-1.5.2.tar.bz2'
-  sha1 '0ca480d0ef2400bb9ebe9a992e011a9f004f42b8'
+  url 'http://www.ivarch.com/programs/sources/pv-1.5.7.tar.bz2'
+  sha1 '173d87d11d02a524037228f6495c46cad3214b7d'
 
   bottle do
-    sha1 "13db5f53546f554a1a1cef88f763022e0ba08974" => :mavericks
-    sha1 "96bedf90d0688c722e7fe1743230e74713089ef9" => :mountain_lion
-    sha1 "cea67d8b62b936e80dfa80fe7d84706bbd258e29" => :lion
+    sha1 "74c116553193e57d114106e970b9c49b9f4104b5" => :mavericks
+    sha1 "d5a03a105681454bdb9bb27259a7b590dd12afa8" => :mountain_lion
+    sha1 "47a5ca248413625e8b70de1b13a96c313c5952ed" => :lion
   end
 
   depends_on 'gettext'

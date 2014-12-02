@@ -1,33 +1,36 @@
-require 'formula'
+require "formula"
 
 class Irssi < Formula
-  homepage 'http://irssi.org/'
-  url 'http://irssi.org/files/irssi-0.8.15.tar.bz2'
-  sha1 'b79ce8c2c98a76b004f63706e7868cd363000d89'
+  homepage "http://irssi.org/"
+  url "http://irssi.org/files/irssi-0.8.17.tar.bz2"
+  sha1 "3bdee9a1c1f3e99673143c275d2c40275136664a"
+
+  bottle do
+    sha1 "cf15f3d0cadb37218e164250c44d78b4c892d177" => :mavericks
+    sha1 "c57f169abb6818eec4fce7581bb0f85a79ce55b2" => :mountain_lion
+    sha1 "7bd34bbdc9f67dd9bdaed0b7e84e29c1518b07f1" => :lion
+  end
 
   option "without-perl", "Build without perl support"
 
-  depends_on :clt # See https://github.com/Homebrew/homebrew/issues/20952
-  depends_on 'pkg-config' => :build
-  depends_on 'glib'
-  depends_on 'openssl' => :optional
-
-  devel do
-    url 'http://irssi.org/files/irssi-0.8.16-rc1.tar.gz'
-    sha1 '40d560841d92ca3555e5dc5e2be922510cd348d5'
-  end
+  depends_on "pkg-config" => :build
+  depends_on "glib"
+  depends_on "openssl" => :optional
 
   # Fix Perl build flags and paths in man page
-  def patches; DATA; end
+  patch :DATA
 
   def install
-    args =%W[
+    args = %W[
+      --disable-dependency-tracking
       --prefix=#{prefix}
       --sysconfdir=#{etc}
       --with-bot
       --with-proxy
       --enable-ipv6
+      --enable-true-color
       --with-socks
+      --with-ncurses=#{MacOS.sdk_path}/usr
     ]
 
     if build.with? "perl"
@@ -41,9 +44,9 @@ class Irssi < Formula
 
     system "./configure", *args
 
-    # 'make' and 'make install' must be done separately on some systems
+    # "make" and "make install" must be done separately on some systems
     system "make"
-    system "make install"
+    system "make", "install"
   end
 end
 

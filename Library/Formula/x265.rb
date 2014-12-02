@@ -1,15 +1,15 @@
 require 'formula'
 
 class X265 < Formula
-  homepage 'http://x265.org'
-  url 'https://bitbucket.org/multicoreware/x265/get/0.8.tar.bz2'
-  sha1 '79c60b3fe528e7b91b799b85e971885c1b040b6e'
+  homepage "http://x265.org"
+  url "https://bitbucket.org/multicoreware/x265/get/1.4.tar.bz2"
+  sha1 "95b4481d61d1766fce4b7120d4b49d08e39d922b"
 
   bottle do
     cellar :any
-    sha1 "1d3a8f05eb2994290fd08b9a42a84c5db3561e42" => :mavericks
-    sha1 "810c333f3d71f73e69b6ac6e391464eb7259c601" => :mountain_lion
-    sha1 "518b8997f9f7707a3079f76d24b3e0075eaa8ea5" => :lion
+    sha1 "e01e498d5bcd69391d2ac68ce0f507c1aec71b4f" => :yosemite
+    sha1 "b25757d40934c1d49d183f71dde41ade71563ea0" => :mavericks
+    sha1 "41905d7b570e7e2be6d4fd99f641b5549a8e7719" => :mountain_lion
   end
 
   head 'https://bitbucket.org/multicoreware/x265', :using => :hg
@@ -34,11 +34,9 @@ class X265 < Formula
   test do
     yuv_path = testpath/"raw.yuv"
     x265_path = testpath/"x265.265"
-    File.open(yuv_path, 'wb') do |f|
-        (1..3200).each do f.write("\xCO\xFF\xEE") end
-    end
+    yuv_path.binwrite "\xCO\xFF\xEE" * 3200
     system "#{bin}/x265 --input-res 80x80 --fps 1 #{yuv_path} #{x265_path}"
-    header = 'AAAAAUABDAH//wFgAAADAIAAAAMAAAMAHpXA'
-    assert_equal header.unpack("m"), [x265_path.read(27)]
-    end
+    header = 'AAAAAUABDAH//w=='
+    assert_equal header.unpack("m"), [x265_path.read(10)]
+  end
 end

@@ -7,11 +7,9 @@ class Djmount < Formula
 
   depends_on 'pkg-config' => :build
   depends_on 'libupnp'
-  depends_on 'osxfuse'
+  depends_on :osxfuse
 
-  def patches
-    { :p0 => DATA }
-  end
+  patch :p0, :DATA
 
   def install
     ENV['FUSE_CFLAGS'] = `pkg-config fuse --cflags`.chomp

@@ -12,11 +12,9 @@ class Gcab < Formula
   depends_on 'glib'
   depends_on 'gobject-introspection'
 
- def patches
-   # work around ld not understanding --version-script argument
-   # upstream bug: https://bugzilla.gnome.org/show_bug.cgi?id=708257
-   DATA
- end
+  # work around ld not understanding --version-script argument
+  # upstream bug: https://bugzilla.gnome.org/show_bug.cgi?id=708257
+  patch :DATA
 
   def install
     system "./configure", "--disable-debug",
@@ -38,4 +36,4 @@ index 2264c17..7782d62 100644
 +	-Wl                                     	\
  	-no-undefined					\
  	$(NULL)
- 
+

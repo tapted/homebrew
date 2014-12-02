@@ -4,15 +4,18 @@ class Cairomm < Formula
   homepage 'http://cairographics.org/cairomm/'
   url 'http://cairographics.org/releases/cairomm-1.10.0.tar.gz'
   sha256 '068d96c43eae7b0a3d98648cbfc6fbd16acc385858e9ba6d37b5a47e4dba398f'
+  revision 1
 
   bottle do
-    sha1 "a755e155b8568e9345b0519fadc9cc0f1520e0a3" => :mavericks
-    sha1 "7c4f267a6de185c1b2443d1e1e0b9522dd017064" => :mountain_lion
-    sha1 "d93ad16013188911f8afe180dcfc6ea832f826f8" => :lion
+    revision 1
+    sha1 "11d150d437921cd03ec810690db1e12bf952a7cf" => :yosemite
+    sha1 "17435d1a18ecda653fa71097ba9620b46421aabf" => :mavericks
+    sha1 "3247ebe37140dc109465dcfc7b5df6d948690091" => :mountain_lion
   end
 
-  option 'without-x', 'Build without X11 support'
   option :cxx11
+
+  deprecated_option "without-x" => "without-x11"
 
   depends_on 'pkg-config' => :build
   if build.cxx11?
@@ -20,8 +23,10 @@ class Cairomm < Formula
   else
     depends_on 'libsigc++'
   end
+
   depends_on 'cairo'
-  depends_on :x11 if build.with? "x"
+  depends_on 'libpng'
+  depends_on :x11 => :recommended
 
   def install
     ENV.cxx11 if build.cxx11?

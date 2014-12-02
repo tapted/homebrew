@@ -2,9 +2,15 @@ require 'formula'
 
 class GstPluginsBad < Formula
   homepage 'http://gstreamer.freedesktop.org/'
-  url 'http://gstreamer.freedesktop.org/src/gst-plugins-bad/gst-plugins-bad-1.2.3.tar.xz'
-  mirror 'http://ftp.osuosl.org/pub/blfs/svn/g/gst-plugins-bad-1.2.3.tar.xz'
-  sha256 '595d7911a9e6207dea37200587724bdbf841b81a5eb0730118be36976684278c'
+  url 'http://gstreamer.freedesktop.org/src/gst-plugins-bad/gst-plugins-bad-1.4.4.tar.xz'
+  mirror 'http://ftp.osuosl.org/pub/blfs/svn/g/gst-plugins-bad-1.4.4.tar.xz'
+  sha256 'e41b36105c0a13a2cb1ff9f559714e839b82dc3841484cd664790fb7947e55c7'
+
+  bottle do
+    sha1 "305cae1ca296427ae68f4b641ea985466486586e" => :yosemite
+    sha1 "96b48ba16e465cdf8fd6db64fcf3a22a8b89d5f8" => :mavericks
+    sha1 "f395b147b64092881bab0cc79b8bad9f44c6690f" => :mountain_lion
+  end
 
   head do
     url 'git://anongit.freedesktop.org/gstreamer/gst-plugins-bad'
@@ -29,8 +35,6 @@ class GstPluginsBad < Formula
   depends_on 'schroedinger' => :optional
 
   def install
-    ENV.append "CFLAGS", "-funroll-loops -fstrict-aliasing"
-
     args = %W[
       --prefix=#{prefix}
       --disable-apple_media
@@ -41,7 +45,7 @@ class GstPluginsBad < Formula
     ]
 
     if build.head?
-      ENV.append "NOCONFIGURE", "yes"
+      ENV["NOCONFIGURE"] = "yes"
       system "./autogen.sh"
     end
 

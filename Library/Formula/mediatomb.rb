@@ -4,6 +4,13 @@ class Mediatomb < Formula
   homepage 'http://mediatomb.cc'
   url 'https://downloads.sourceforge.net/mediatomb/mediatomb-0.12.1.tar.gz'
   sha1 '86e880584cc9c8aaf3926d56048510d1d06e76b4'
+  bottle do
+    sha1 "716145891055b842417844efb1f786344ba79f56" => :mavericks
+    sha1 "d5fd8a1389771a2bf4677dc5f008b0c4249344aa" => :mountain_lion
+    sha1 "ae3e70647489adec58c1433652d05bad3844f16a" => :lion
+  end
+
+  revision 1
 
   depends_on 'libexif' => :recommended
   depends_on 'libmagic' => :recommended
@@ -38,13 +45,28 @@ class Mediatomb < Formula
   end
 
   patch do
-    url "http://sourceforge.net/tracker/download.php?group_id=129766&atid=715782&file_id=445437&aid=3532724"
+    url "http://sourceforge.net/p/mediatomb/patches/_discuss/thread/57c47fb9/8ad8/attachment/mediatomb-urifix.patch"
     sha1 "7f4f9ef10fcbb05de95780f43bf4df9bd6563918"
   end
 
+  # Upstream patch: http://sourceforge.net/p/mediatomb/patches/35/
+  patch do
+    url "https://gist.githubusercontent.com/jacknagel/0971b2626b3a3c86c055/raw/31e568792918b57622dba559658e4161ad87f519/0010_fix_libmp4v2_build.patch"
+    sha1 "5b879fc1640e2283941075e555212d4b81dd8e48"
+  end
+
   def install
-    system "./configure", "--disable-dependency-tracking", "--prefix=#{prefix}"
-    system "make install"
+    args = %W[
+      --disable-dependency-tracking
+      --prefix=#{prefix}
+    ]
+
+    if build.without? "mp4v2"
+      args << "--disable-libmp4v2"
+    end
+
+    system "./configure", *args
+    system "make", "install"
   end
 
   def caveats; <<-EOS.undent

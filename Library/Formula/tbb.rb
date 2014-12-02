@@ -1,50 +1,50 @@
-require 'formula'
+require "formula"
 
 class Tbb < Formula
-  homepage 'http://www.threadingbuildingblocks.org/'
-  url 'https://www.threadingbuildingblocks.org/sites/default/files/software_releases/source/tbb42_20130725oss_src.tgz'
-  sha1 'f354bd9b67295f65c43531b751e34f483ed8a024'
-  version '4.2'
+  homepage "http://www.threadingbuildingblocks.org/"
+  url "https://www.threadingbuildingblocks.org/sites/default/files/software_releases/source/tbb43_20140724oss_src.tgz"
+  sha1 "4cb73cd0ac61b790318358ae4782f80255715278"
+  version "4.3-20140724"
 
-  option :cxx11
-
-  fails_with :llvm do
-    cause 'llvm is not supported on macos. Add build/macos.llvm.inc file with compiler-specific settings.'
+  bottle do
+    cellar :any
+    sha1 "500a19e3b12c7ecd04d09c558403b03dabaef465" => :mavericks
+    sha1 "17194db68fe3dc0a932094f04776bc5c7eee756d" => :mountain_lion
+    sha1 "2bb200abaf9f8182bfb948e4dee513b9afca2198" => :lion
   end
 
-  # tbb uses the wrong command (-v, verbose) to fetch the version from the
-  # compiler, causing problems if the compiler returns additional debug info
-  # Reported upstream at http://software.intel.com/en-us/forums/topic/475120
-  def patches; DATA; end
+  # requires malloc features first introduced in Lion
+  # https://github.com/Homebrew/homebrew/issues/32274
+  depends_on :macos => :lion
+
+  option :cxx11
 
   def install
     # Intel sets varying O levels on each compile command.
     ENV.no_optimization
-    ENV.cxx11 if build.cxx11?
-    # Override build prefix so we can copy the dylibs out of the same place
-    # no matter what system we're on, and use our compilers.
-    compiler = ENV.compiler.to_s.start_with?('gcc') ? 'gcc' : ENV.compiler
-    args = ['tbb_build_prefix=BUILDPREFIX',
-            "compiler=#{compiler}"]
-    args << (MacOS.prefer_64_bit? ? "arch=intel64" : "arch=ia32")
-    args << "cpp0x=1" << "stdlib=libc++" if build.cxx11?
+
+    args = %W[tbb_build_prefix=BUILDPREFIX]
+
+    case ENV.compiler
+    when :clang
+      args << "compiler=clang"
+    else
+      args << "compiler=gcc"
+    end
+
+    if MacOS.prefer_64_bit?
+      args << "arch=intel64"
+    else
+      args << "arch=ia32"
+    end
+
+    if build.cxx11?
+      ENV.cxx11
+      args << "cpp0x=1" << "stdlib=libc++"
+    end
+
     system "make", *args
-    lib.install Dir['build/BUILDPREFIX_release/*.dylib']
-    include.install 'include/tbb'
+    lib.install Dir["build/BUILDPREFIX_release/*.dylib"]
+    include.install "include/tbb"
   end
 end
-
-__END__
-diff --git a/build/version_info_macos.sh b/build/version_info_macos.sh
-index 5970aad..20c863a 100644
---- a/build/version_info_macos.sh
-+++ b/build/version_info_macos.sh
-@@ -31,7 +31,7 @@ echo "#define __TBB_VERSION_STRINGS(N) \\"
- echo '#N": BUILD_HOST'"\t\t"`hostname -s`" ("`arch`")"'" ENDL \'
- echo '#N": BUILD_OS'"\t\t"`sw_vers -productName`" version "`sw_vers -productVersion`'" ENDL \'
- echo '#N": BUILD_KERNEL'"\t"`uname -v`'" ENDL \'
--echo '#N": BUILD_GCC'"\t\t"`gcc -v </dev/null 2>&1 | grep 'version'`'" ENDL \'
-+echo '#N": BUILD_GCC'"\t\t"`gcc --version </dev/null 2>&1 | head -1`'" ENDL \'
- [ -z "$COMPILER_VERSION" ] || echo '#N": BUILD_COMPILER'"\t"$COMPILER_VERSION'" ENDL \'
- echo '#N": BUILD_TARGET'"\t$arch on $runtime"'" ENDL \'
- echo '#N": BUILD_COMMAND'"\t"$*'" ENDL \'

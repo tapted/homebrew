@@ -9,7 +9,7 @@ class Sshguard < Formula
   # Upstream bug report:
   # http://sourceforge.net/tracker/?func=detail&aid=3252151&group_id=188282&atid=924685
   patch do
-    url "https://sourceforge.net/tracker/download.php?group_id=188282&atid=924685&file_id=405677&aid=3252151"
+    url "http://sourceforge.net/p/sshguard/bugs/_discuss/thread/3d94b7ef/c062/attachment/sshguard.c.diff"
     sha1 "68cd0910d310e4d23e7752dee1b077ccfe715c0b"
   end
 
@@ -35,7 +35,7 @@ class Sshguard < Formula
       table (replace $ext_if with your WAN interface):
 
         table <sshguard> persist
-        block in quick on $ext_if proto tcp from any to any port 22 label "ssh bruteforce"
+        block in quick on $ext_if proto tcp from <sshguard> to any port 22 label "ssh bruteforce"
 
       Then run sudo pfctl -f /etc/pf.conf to reload the rules.
       EOS

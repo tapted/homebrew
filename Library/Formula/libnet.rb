@@ -7,15 +7,16 @@ class Libnet < Formula
 
   bottle do
     cellar :any
-    sha1 "760d3bce80332f5f616852c2e32ab6b2b8fcfd51" => :mavericks
-    sha1 "4eca550f12b216daf214ef17aaaaa998edc8dbc2" => :mountain_lion
-    sha1 "714de01fd66edc826414bd730e0f5256f2dd50d1" => :lion
+    revision 1
+    sha1 "4fde2d99706c15ca126f6f5ac83226288d0de5d0" => :yosemite
+    sha1 "8bcb8736a1264d1ec6c44312e36f81ec7a7720c6" => :mavericks
+    sha1 "14f7d1d0c595c08c0bbcc4182ff6eabca6df5c8a" => :mountain_lion
   end
 
   # MacPorts does an autoreconf to get raw sockets working
-  depends_on :automake
-  depends_on :autoconf
-  depends_on :libtool
+  depends_on "automake" => :build
+  depends_on "autoconf" => :build
+  depends_on "libtool" => :build
 
   # Fix raw sockets support
   patch :p0 do
@@ -24,14 +25,7 @@ class Libnet < Formula
   end
 
   def install
-    # Compatibility with Automake 1.13 and newer.
-    # Reported upstream:
-    # https://github.com/sam-github/libnet/issues/28
-    mv 'configure.in', 'configure.ac'
-    inreplace 'configure.ac', 'AM_CONFIG_HEADER', 'AC_CONFIG_HEADERS'
-    (buildpath/'m4').mkpath
-
-    system "autoreconf --force --install"
+    system "autoreconf", "-fvi"
     system "./configure", "--disable-dependency-tracking",
                           "--prefix=#{prefix}"
     inreplace "src/libnet_link_bpf.c", "#include <net/bpf.h>", "" # Per MacPorts

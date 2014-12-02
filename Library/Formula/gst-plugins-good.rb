@@ -4,11 +4,17 @@ class GstPluginsGood < Formula
   homepage 'http://gstreamer.freedesktop.org/'
 
   stable do
-    url 'http://gstreamer.freedesktop.org/src/gst-plugins-good/gst-plugins-good-1.2.3.tar.xz'
-    mirror 'http://ftp.osuosl.org/pub/blfs/svn/g/gst-plugins-good-1.2.3.tar.xz'
-    sha256 'bfb33536a515bdcc34482f64b8d9cc3e47c753878b254923b419bc2f7485e470'
+    url 'http://gstreamer.freedesktop.org/src/gst-plugins-good/gst-plugins-good-1.4.4.tar.xz'
+    mirror 'http://ftp.osuosl.org/pub/blfs/svn/g/gst-plugins-good-1.4.4.tar.xz'
+    sha256 '2df90e99da45211c7b2525ae4ac34830a9e7784bd48c072c406c0cf014bdb277'
 
     depends_on 'check' => :optional
+  end
+
+  bottle do
+    sha1 "42ddc43233247a8cb90da2fc64b90ffd83c25dd1" => :yosemite
+    sha1 "07ab214b44b9e78a7d963f164454a1cb19da7372" => :mavericks
+    sha1 "89e2f6c8b1b738c24058e38b17e2286922ad63f9" => :mountain_lion
   end
 
   head do
@@ -41,6 +47,7 @@ class GstPluginsGood < Formula
   depends_on 'libshout' => :optional
   depends_on 'speex' => :optional
   depends_on 'taglib' => :optional
+  depends_on 'libpng' => :optional
 
   depends_on 'libogg' if build.with? 'flac'
 
@@ -58,11 +65,11 @@ class GstPluginsGood < Formula
     if build.with? "x11"
       args << "--with-x"
     else
-      args << "--without-x"
+      args << "--disable-x"
     end
 
     if build.head?
-      ENV.append "NOCONFIGURE", "yes"
+      ENV["NOCONFIGURE"] = "yes"
       system "./autogen.sh"
     end
 

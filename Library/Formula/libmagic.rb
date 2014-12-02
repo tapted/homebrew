@@ -2,15 +2,15 @@ require 'formula'
 
 class Libmagic < Formula
   homepage 'http://www.darwinsys.com/file/'
-  url 'ftp://ftp.astron.com/pub/file/file-5.17.tar.gz'
-  mirror 'http://fossies.org/unix/misc/file-5.17.tar.gz'
-  sha1 'f7e837a0d3e4f40a02ffe7da5e146b967448e0d8'
+  url 'ftp://ftp.astron.com/pub/file/file-5.20.tar.gz'
+  mirror 'http://fossies.org/unix/misc/file-5.20.tar.gz'
+  sha1 '4e93e9ae915f1812b05cc6012ae968fdb6416f8f'
 
   bottle do
     revision 1
-    sha1 "e39a611cc0351b0f633b96ca7fc8834b8575c4e9" => :mavericks
-    sha1 "049bf4c884b40b53a0e2db2dd3a7c6a4fba2e46d" => :mountain_lion
-    sha1 "6cb0d8979255f0d7b53665e547e4941b79b7dd81" => :lion
+    sha1 "6baadff8fb4c75b791843d89b9c4ea9d49372588" => :yosemite
+    sha1 "c3b661f0a7f7bf2ce31e10676d1192f9393c48de" => :mavericks
+    sha1 "eb205a948d8054253e23725a1046883eb7fc7f4c" => :mountain_lion
   end
 
   option :universal
@@ -19,9 +19,14 @@ class Libmagic < Formula
 
   # Fixed upstream, should be in next release
   # See http://bugs.gw.com/view.php?id=230
-  def patches
-    p = []
-    p << DATA if MacOS.version < :lion
+  patch :DATA if MacOS.version < :lion
+
+  # Fixed upstream, should be in next release.
+  # See: http://bugs.gw.com/view.php?id=387
+  #      http://bugs.gw.com/view.php?id=388
+  patch :p1 do
+    url 'https://gist.githubusercontent.com/kwilczynski/350e83c291b536ce9b5b/raw/1961a222d13cd3e010ecd7b0ebbc6909def27ad6/337-338.diff'
+    sha1 'b220e2b0639cba97296e25c07c58a4d675104c8f'
   end
 
   def install

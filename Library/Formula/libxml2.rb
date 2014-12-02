@@ -1,29 +1,26 @@
-require 'formula'
+require "formula"
 
 class Libxml2 < Formula
-  homepage 'http://xmlsoft.org'
-
-  stable do
-    url 'ftp://xmlsoft.org/libxml2/libxml2-2.9.1.tar.gz'
-    mirror 'http://xmlsoft.org/sources/libxml2-2.9.1.tar.gz'
-    sha256 'fd3c64cb66f2c4ea27e934d275904d92cec494a8e8405613780cbc8a71680fdb'
-  end
+  homepage "http://xmlsoft.org"
+  url "http://xmlsoft.org/sources/libxml2-2.9.2.tar.gz"
+  mirror "ftp://xmlsoft.org/libxml2/libxml2-2.9.2.tar.gz"
+  sha256 "5178c30b151d044aefb1b08bf54c3003a0ac55c59c866763997529d60770d5bc"
 
   bottle do
-    sha1 "1971dcb3cfb9a68555ee6eaff7c83d0dd8109442" => :mavericks
-    sha1 "558653754996428880b14123dac08baa639f97c3" => :mountain_lion
-    sha1 "93b5c4b98475f71cbf1915b2293df14d7621b262" => :lion
+    sha1 "c5718c3b2a05f295e15d9b983eab3ddd1ec32ca2" => :yosemite
+    sha1 "24867f49b7680fbb56641d5738cf9d86062d9839" => :mavericks
+    sha1 "07d2f3f63fd909d1ad0b51fdb51c09b1163180eb" => :mountain_lion
   end
 
   head do
     url 'https://git.gnome.org/browse/libxml2', :using => :git
 
-    depends_on :autoconf
-    depends_on :automake
-    depends_on :libtool
+    depends_on "autoconf" => :build
+    depends_on "automake" => :build
+    depends_on "libtool" => :build
   end
 
-  depends_on :python => :recommended
+  depends_on :python => :optional
 
   keg_only :provided_by_osx
 
@@ -43,7 +40,8 @@ class Libxml2 < Formula
 
     system "./configure", "--disable-dependency-tracking",
                           "--prefix=#{prefix}",
-                          "--without-python"
+                          "--without-python",
+                          "--without-lzma"
     system "make"
     ENV.deparallelize
     system "make install"

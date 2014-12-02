@@ -21,9 +21,10 @@ class Ksh < Formula
 
   bottle do
     cellar :any
-    sha1 "fa65a4bbcc9a9c57db96d00c64cd1e5439eba5e3" => :mavericks
-    sha1 "4f46403e57e4ed2668f760d4c4dea09f321f4278" => :mountain_lion
-    sha1 "973d02e45b84e79fd65e56ed46b8b813553bad79" => :lion
+    revision 1
+    sha1 "e9cb13e19571b48d13c1b51c37d74c8a3206d397" => :mavericks
+    sha1 "568d10076fcb5b145611fd60fa01b0b0fb9d5f39" => :mountain_lion
+    sha1 "ad1c9d854e90b29baee3b1ade2c185ac48119657" => :lion
   end
 
   resource "init" do
@@ -39,17 +40,17 @@ class Ksh < Formula
     system "/bin/ksh", "bin/package", "read"
 
     # Needed due to unusal build system.
-    ENV["HOMEBREW_CCCFG"] += "O"
+    ENV.refurbish_args
 
     # From Apple"s ksh makefile.
     kshcppdefines = "-DSHOPT_SPAWN=0 -D_ast_int8_t=int64_t -D_lib_memccpy"
     system "/bin/ksh", "bin/package", "make", "CCFLAGS=#{kshcppdefines}"
 
     bin.install "arch/darwin.i386-64/bin/ksh" => "ksh93"
-    ln_s "#{bin}/ksh93", "#{bin}/ksh"
+    bin.install_symlink "ksh93" => "ksh"
 
     man1.install "arch/darwin.i386-64/man/man1/sh.1" => "ksh93.1"
-    ln_s "#{man}/ksh93.1", "#{man}/ksh.1"
+    man1.install_symlink "ksh93.1" => "ksh.1"
   end
 
   def caveats; <<-EOS.undent

@@ -2,9 +2,9 @@ require 'formula'
 
 class Datomic < Formula
   homepage 'http://www.datomic.com/'
-  url 'https://my.datomic.com/downloads/free/0.9.4578'
-  sha1 '98be5ed1c419993beba09bd67c412c6ac6678d72'
-  version '0.9.4578'
+  url 'https://my.datomic.com/downloads/free/0.9.5067'
+  sha256 'babba5f85070ea656bd9580d89023ce5ca796458292d65211a186197a9ebab0a'
+  version '0.9.5067'
 
   def write_libexec_alias *script_names
     script_names.each do |script_name|

@@ -2,10 +2,7 @@ require 'formula'
 
 class Plowshare < Formula
   homepage 'http://code.google.com/p/plowshare/'
-  url 'https://plowshare.googlecode.com/files/plowshare4-snapshot-git20131130.3c63b19.tar.gz'
-  version '4.GIT-3c63b19'
-  sha1 '806076746394d06f118aef98fbc1c8bbd3585269'
-
+  url 'https://code.google.com/p/plowshare/', :tag => 'v1.0.5', :using => :git
   head 'https://code.google.com/p/plowshare/', :using => :git
 
   depends_on 'recode'
@@ -17,13 +14,10 @@ class Plowshare < Formula
   depends_on 'gnu-sed'
   depends_on 'gnu-getopt'
 
-  def patches
-    DATA
-  end
+  patch :DATA
 
   def install
-    ENV["PREFIX"] = prefix
-    system "bash setup.sh install"
+    system "make", "install", "PREFIX=#{prefix}"
   end
 
   def caveats; <<-EOS.undent

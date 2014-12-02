@@ -2,8 +2,8 @@ require 'formula'
 
 class WildflyAs < Formula
   homepage 'http://wildfly.org/'
-  url 'http://download.jboss.org/wildfly/8.0.0.Final/wildfly-8.0.0.Final.tar.gz'
-  sha1 '594f78aa04dd35c936615563ff3777a67228ba9d'
+  url 'http://download.jboss.org/wildfly/8.2.0.Final/wildfly-8.2.0.Final.tar.gz'
+  sha1 'd78a864386a9bc08812eed9781722e45812a7826'
 
   def install
     rm_f Dir["bin/*.bat"]
@@ -22,5 +22,4 @@ class WildflyAs < Formula
   test do
     system "#{opt_libexec}/bin/standalone.sh --version | grep #{version}"
   end
-
 end

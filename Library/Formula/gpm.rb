@@ -12,14 +12,14 @@ end
 
 class Gpm < Formula
   homepage "https://github.com/pote/gpm"
-  url "https://github.com/pote/gpm/archive/v1.1.1.tar.gz"
-  sha1 "dfa0a633f28cdbc48a7ade593a7a5dfe8136cc2f"
+  url "https://github.com/pote/gpm/archive/v1.3.1.tar.gz"
+  sha1 "e29a009aeddad05d08a23c3694bedad7602dbe7a"
 
   bottle do
     cellar :any
-    sha1 "be4a9a7e9a5e920d04c145e3fcb55580607a0f53" => :mavericks
-    sha1 "551c3f73f109eddf6fa1938cfa2fbe05088c0dad" => :mountain_lion
-    sha1 "433716c37294d5380affb56371d6677fe6e2e58b" => :lion
+    sha1 "d07f2a511b3111d069dfc74ecbaccf7059e67c61" => :mavericks
+    sha1 "94975efcfb696ff95e37a3b845ed16ff9d00ff82" => :mountain_lion
+    sha1 "2623227176179dbdb5e828b93d590b432c4ab503" => :lion
   end
 
   depends_on GoInstalled
@@ -33,7 +33,7 @@ class Gpm < Formula
     Pathname("Godeps").write "github.com/pote/gpm-testing-package v6.1"
 
     ENV["GOPATH"] = testpath
-    system "gpm", "install"
+    system bin/"gpm", "install"
 
     Pathname("go_code.go").write <<-EOS.undent
       package main
@@ -47,6 +47,9 @@ class Gpm < Formula
               fmt.Print(gpm_testing_package.Version())
       }
     EOS
-    `go run go_code.go` == "v6.1"
+
+    out = `go run go_code.go`
+    assert_equal "v6.1", out
+    assert_equal 0, $?.exitstatus
   end
 end

@@ -2,11 +2,19 @@ require "formula"
 
 class Platypus < Formula
   homepage "http://sveinbjorn.org/platypus"
-  url "https://github.com/sveinbjornt/Platypus/raw/4.8/Releases/platypus4.8.src.zip"
+  url "https://raw.githubusercontent.com/sveinbjornt/Platypus/4.8/Releases/platypus4.8.src.zip"
   sha1 "39d165b9579600cef637b45c70c82307697bb7be"
   head "https://github.com/sveinbjornt/Platypus.git", :branch => "master"
 
-  depends_on :xcode
+  bottle do
+    cellar :any
+    revision 1
+    sha1 "5a139598aec4a7e83d3c3ce662b3ab16f9503e0c" => :yosemite
+    sha1 "dcd15ab5fb3068899164c7be0fb2c7690383b788" => :mavericks
+    sha1 "502dd32f63eff7c2028a5197636335a43665c226" => :mountain_lion
+  end
+
+  depends_on :xcode => :build
 
   def install
     # 4.8 tarball has extra __MACOSX folder, so go to the right one

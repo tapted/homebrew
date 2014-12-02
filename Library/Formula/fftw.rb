@@ -2,20 +2,23 @@ require 'formula'
 
 class Fftw < Formula
   homepage 'http://www.fftw.org'
-  url 'http://www.fftw.org/fftw-3.3.3.tar.gz'
-  sha1 '11487180928d05746d431ebe7a176b52fe205cf9'
+  url 'http://www.fftw.org/fftw-3.3.4.tar.gz'
+  sha1 'fd508bac8ac13b3a46152c54b7ac885b69734262'
 
   bottle do
     cellar :any
-    sha1 "9aeaea9d8cfacda9b6b4a2be377e5cff1c639de6" => :mavericks
-    sha1 "d59acf1f5bd1ac955ab930fbbef2a2efc8ee3a55" => :mountain_lion
-    sha1 "272dc2ed950d7ddf59dee0eaf00499c7fd965f95" => :lion
+    revision 2
+    sha1 "23ca4d2d44d13a4831cbeb8600425389050ca601" => :yosemite
+    sha1 "5103995b587d5223f54c20ce64023aea5220de11" => :mavericks
+    sha1 "7874a8fe1eeb52096a428778da61564358f6729e" => :mountain_lion
   end
 
   option "with-fortran", "Enable Fortran bindings"
   option :universal
+  option "with-mpi", "Enable MPI parallel transforms"
 
   depends_on :fortran => :optional
+  depends_on :mpi => [:cc, :optional]
 
   def install
     args = ["--enable-shared",
@@ -27,6 +30,7 @@ class Fftw < Formula
     simd_args << "--enable-avx" if ENV.compiler == :clang and Hardware::CPU.avx? and !build.bottle?
 
     args << "--disable-fortran" if build.without? "fortran"
+    args << "--enable-mpi" if build.with? "mpi"
 
     ENV.universal_binary if build.universal?
 
@@ -73,7 +77,7 @@ class Fftw < Formula
       }
     TEST_SCRIPT
 
-    system ENV.cc, '-o', 'fftw', 'fftw.c', '-lfftw3', *ENV.cflags.split
+    system ENV.cc, '-o', 'fftw', 'fftw.c', '-lfftw3', *ENV.cflags.to_s.split
     system './fftw'
   end
 end

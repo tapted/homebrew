@@ -28,9 +28,7 @@ class Csync < Formula
 
   depends_on :macos => :lion
 
-  def patches
-    DATA
-  end
+  patch :DATA
 
   def install
     mkdir 'build' unless build.head?
@@ -52,7 +50,7 @@ class Csync < Formula
   end
 
   test do
-    system "csync", "-V"
+    system bin/"csync", "-V"
   end
 end
 

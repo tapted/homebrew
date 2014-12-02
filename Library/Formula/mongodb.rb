@@ -1,101 +1,97 @@
-require 'formula'
+require "formula"
 
 class Mongodb < Formula
-  homepage 'http://www.mongodb.org/'
-  url 'http://downloads.mongodb.org/src/mongodb-src-r2.4.9.tar.gz'
-  sha1 '3aa495cf32769a09ee9532827391892d96337d6b'
+  homepage "https://www.mongodb.org/"
+
+  stable do
+    url "https://fastdl.mongodb.org/src/mongodb-src-r2.6.5.tar.gz"
+    sha1 "f5a68505a0de1152b534d62a8f0147d258d503a0"
+
+    # Review this patch with the next stable release.
+    # Note it is a different patch to the one applied to all builds further below.
+    # This is already fixed in the devel & HEAD builds.
+    if MacOS.version == :yosemite
+      patch do
+        url "https://github.com/mongodb/mongo/commit/759b6e8.diff"
+        sha1 "63d901ac81681fbe8b92dc918954b247990ab2fb"
+      end
+    end
+  end
 
   bottle do
     revision 2
-    sha1 "5447af6e8f6a2870306e03d318351f1d8efecb1f" => :mavericks
-    sha1 "8b40016996e9dd42bbef3657d3a3c9357bd5d5ea" => :mountain_lion
-    sha1 "e9686685cf1fdbd65109ea8e9979169f0ce728b6" => :lion
-  end
-
-  stable do
-    # When 2.6 is released this conditional can be removed.
-    if MacOS.version < :mavericks
-      option "with-boost", "Compile using installed boost, not the version shipped with mongodb"
-      depends_on "boost" => :optional
-    end
-
-    # Fix Clang v8 build failure from build warnings and -Werror
-    patch do
-      url "https://github.com/mongodb/mongo/commit/be4bc7.patch"
-      sha1 "72152f9bec94aaaacb16d0b17511b0862d38ac21"
-    end
+    sha1 "e6da509908fdacf9eb0f16e850e0516cd0898072" => :yosemite
+    sha1 "5ab96fe864e725461eea856e138417994f50bb32" => :mavericks
+    sha1 "193e639b7b79fbb18cb2e0a6bbabfbc9b8cbc042" => :mountain_lion
   end
 
   devel do
-    url 'http://downloads.mongodb.org/src/mongodb-src-r2.5.5.tar.gz'
-    sha1 '4827f3da107174a3cbb1f5b969c7f597ca09b4f8'
+    # This can't be bumped past 2.7.7 until we decide what to do with
+    # https://github.com/Homebrew/homebrew/pull/33652
+    url "https://fastdl.mongodb.org/src/mongodb-src-r2.7.7.tar.gz"
+    sha1 "ce223f5793bdf5b3e1420b0ede2f2403e9f94e5a"
 
-    option "with-boost", "Compile using installed boost, not the version shipped with mongodb"
-    depends_on "boost" => :optional
+    # Remove this with the next devel release. Already merged in HEAD.
+    # https://github.com/mongodb/mongo/commit/8b8e90fb
+    patch do
+      url "https://github.com/mongodb/mongo/commit/8b8e90fb.diff"
+      sha1 "9f9ce609c7692930976690cae68aa4fce1f8bca3"
+    end
   end
 
-  head do
-    url 'https://github.com/mongodb/mongo.git'
+  option "with-boost", "Compile using installed boost, not the version shipped with mongodb"
 
-    option "with-boost", "Compile using installed boost, not the version shipped with mongodb"
-    depends_on "boost" => :optional
+  depends_on "boost" => :optional
+  depends_on :macos => :snow_leopard
+  depends_on "scons" => :build
+  depends_on "openssl" => :optional
+
+  # Review this patch with each release.
+  # This modifies the SConstruct file to include 10.10 as an accepted build option.
+  if MacOS.version == :yosemite
+    patch do
+      url "https://raw.githubusercontent.com/DomT4/scripts/fbc0cda/Homebrew_Resources/Mongodb/mongoyosemite.diff"
+      sha1 "f4824e93962154aad375eb29527b3137d07f358c"
+    end
   end
-
-  depends_on 'scons' => :build
-  depends_on 'openssl' => :optional
 
   def install
-    args = ["--prefix=#{prefix}", "-j#{ENV.make_jobs}"]
-
-    cxx = ENV.cxx
-    if ENV.compiler == :clang && MacOS.version >= :mavericks
-      if build.stable?
-        # When 2.6 is released this cxx hack can be removed
-        # ENV.append "CXXFLAGS", "-stdlib=libstdc++" does not work with scons
-        # so use this hack of appending the flag to the --cxx parameter of the sconscript.
-        # mongodb 2.4 can't build with libc++, but defaults to it on Mavericks
-        cxx += " -stdlib=libstdc++"
-      else
-        # build devel and HEAD version on Mavericks with libc++
-        # Use --osx-version-min=10.9 such that the compiler defaults to libc++.
-        # Upstream issue discussing the default flags:
-        # https://jira.mongodb.org/browse/SERVER-12682
-        args << "--osx-version-min=10.9"
-      end
-    end
-
-    args << '--64' if MacOS.prefer_64_bit?
-    args << "--cc=#{ENV.cc}"
-    args << "--cxx=#{cxx}"
+    args = %W[
+      --prefix=#{prefix}
+      -j#{ENV.make_jobs}
+      --cc=#{ENV.cc}
+      --cxx=#{ENV.cxx}
+      --osx-version-min=#{MacOS.version}
+    ]
 
     # --full installs development headers and client library, not just binaries
-    args << "--full"
+    # (only supported pre-2.7)
+    args << "--full" if build.stable?
     args << "--use-system-boost" if build.with? "boost"
+    args << "--64" if MacOS.prefer_64_bit?
 
-    if build.with? 'openssl'
-      args << '--ssl'
-      args << "--extrapath=#{Formula["openssl"].opt_prefix}"
+    if build.with? "openssl"
+      args << "--ssl" << "--extrapath=#{Formula["openssl"].opt_prefix}"
     end
 
-    scons 'install', *args
+    scons "install", *args
 
     (buildpath+"mongod.conf").write mongodb_conf
     etc.install "mongod.conf"
 
-    (var+'mongodb').mkpath
-    (var+'log/mongodb').mkpath
+    (var+"mongodb").mkpath
+    (var+"log/mongodb").mkpath
   end
 
   def mongodb_conf; <<-EOS.undent
-    # Store data in #{var}/mongodb instead of the default /data/db
-    dbpath = #{var}/mongodb
-
-    # Append logs to #{var}/log/mongodb/mongo.log
-    logpath = #{var}/log/mongodb/mongo.log
-    logappend = true
-
-    # Only accept local connections
-    bind_ip = 127.0.0.1
+    systemLog:
+      destination: file
+      path: #{var}/log/mongodb/mongo.log
+      logAppend: true
+    storage:
+      dbPath: #{var}/mongodb
+    net:
+      bindIp: 127.0.0.1
     EOS
   end
 
@@ -140,6 +136,6 @@ class Mongodb < Formula
   end
 
   test do
-    system "#{bin}/mongod", '--sysinfo'
+    system "#{bin}/mongod", "--sysinfo"
   end
 end

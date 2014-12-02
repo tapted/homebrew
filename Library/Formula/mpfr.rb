@@ -1,23 +1,30 @@
-require 'formula'
+require "formula"
 
 class Mpfr < Formula
-  homepage 'http://www.mpfr.org/'
+  homepage "http://www.mpfr.org/"
   # Upstream is down a lot, so use the GNU mirror + Gist for patches
-  url 'http://ftpmirror.gnu.org/mpfr/mpfr-3.1.2.tar.bz2'
-  mirror 'http://ftp.gnu.org/gnu/mpfr/mpfr-3.1.2.tar.bz2'
-  sha1 '46d5a11a59a4e31f74f73dd70c5d57a59de2d0b4'
+  url "http://ftpmirror.gnu.org/mpfr/mpfr-3.1.2.tar.bz2"
+  mirror "http://ftp.gnu.org/gnu/mpfr/mpfr-3.1.2.tar.bz2"
+  sha1 "46d5a11a59a4e31f74f73dd70c5d57a59de2d0b4"
+  version "3.1.2-p10"
 
   bottle do
     cellar :any
     revision 1
-    sha1 '99b4ddca907f132e803e8a54a48c9e2ba993b5bb' => :mavericks
-    sha1 '1763687dd580ac9bd02f31a8b259a1ad568dd3b6' => :mountain_lion
-    sha1 '62c126d1d949cb4d545f44d9c45fe4b0bf276fd4' => :lion
+    sha1 "7950d0c8f2e68673099516b7c2026055e75d1f9d" => :yosemite
+    sha1 "6e63f815013d281187fd6017aeb8ee9f24ca9ad2" => :mavericks
+    sha1 "40956fd01c8882333cdaf447eb637480ac8520e8" => :mountain_lion
   end
 
-  depends_on 'gmp'
+  # http://www.mpfr.org/mpfr-current/allpatches
+  patch do
+    url "https://gist.githubusercontent.com/jacknagel/7f276cd60149a1ffc9a7/raw/39116c674a8c340fef880a393d7c7bdc6d73c59e/mpfr-3.1.2-p10.diff"
+    sha1 "c101708c6f7d86a3f7309c2e046d907ac36d6aa4"
+  end
 
-  option '32-bit'
+  depends_on "gmp"
+
+  option "32-bit"
 
   fails_with :clang do
     build 421
@@ -28,18 +35,8 @@ class Mpfr < Formula
   end
 
   def install
-    args = ["--disable-dependency-tracking", "--prefix=#{prefix}"]
-
-    # Build 32-bit where appropriate, and help configure find 64-bit CPUs
-    if MacOS.prefer_64_bit? and not build.build_32_bit?
-      ENV.m64
-      args << "--build=x86_64-apple-darwin"
-    else
-      ENV.m32
-      args << "--build=none-apple-darwin"
-    end
-
-    system "./configure", *args
+    ENV.m32 if build.build_32_bit?
+    system "./configure", "--disable-dependency-tracking", "--prefix=#{prefix}"
     system "make"
     system "make check"
     system "make install"

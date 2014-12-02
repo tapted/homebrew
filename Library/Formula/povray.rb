@@ -4,11 +4,12 @@ class Povray < Formula
   homepage 'http://www.povray.org/'
   url 'https://github.com/POV-Ray/povray/archive/v3.7.0.0.tar.gz'
   sha1 '1d160d45e69d096e4c22f3b034dcc9ee94d22208'
+  revision 1
 
   depends_on :macos => :lion
   depends_on :autoconf
   depends_on :automake
-  depends_on :libpng
+  depends_on 'libpng'
   depends_on 'boost'
   depends_on 'jpeg'
   depends_on 'libtiff'
@@ -40,13 +41,13 @@ class Povray < Formula
 
   # Fixes some compiler warnings; comes from the upstream repo, should be in next release.
   patch do
-    url "https://github.com/POV-Ray/povray/commit/b3846f5723745e6e7926883ec6bc404922a900e6.patch"
-    sha1 "ccb75f8fd80020828d51451538d9079ff94f8a02"
+    url "https://github.com/POV-Ray/povray/commit/b3846f5723745e6e7926883ec6bc404922a900e6.diff"
+    sha1 "2266b17c984fe7cceee6c99f6bb9dd83bc179106"
   end
 
   # Replaces references to shared_ptr with boost::shared_ptr
   patch do
-    url "https://gist.github.com/mistydemeo/7633971/raw/ef285191f9da25aa73806d1200611b8c955ab873/boost-sharedptr.diff"
+    url "https://gist.githubusercontent.com/mistydemeo/7633971/raw/ef285191f9da25aa73806d1200611b8c955ab873/boost-sharedptr.diff"
     sha1 "8d38908f41eab4da61d1d892ee030bff0bfefeaa"
   end
 

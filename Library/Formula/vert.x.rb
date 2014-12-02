@@ -2,9 +2,8 @@ require 'formula'
 
 class VertX < Formula
   homepage 'http://vertx.io/'
-  url 'http://dl.bintray.com/vertx/downloads/vert.x-2.1M5.tar.gz'
-  sha1 '29695bdce55908823423596aeca344bc142c31cb'
-  version '2.1M5'
+  url 'http://dl.bintray.com/vertx/downloads/vert.x-2.1.5.tar.gz'
+  sha1 'bac58701858462f13c0b01de99e2ada0a4df8431'
 
   def install
     rm_f Dir["bin/*.bat"]

@@ -2,9 +2,15 @@ require 'formula'
 
 class GstLibav < Formula
   homepage 'http://gstreamer.freedesktop.org'
-  url 'http://gstreamer.freedesktop.org/src/gst-libav/gst-libav-1.2.3.tar.xz'
-  mirror 'http://ftp.osuosl.org/pub/blfs/svn/g/gst-libav-1.2.3.tar.xz'
-  sha256 'ebc7fbe10955f40df6ccc4bf689075e7e296205fc7ecd8ff383d43c5cdf5bcd6'
+  url 'http://gstreamer.freedesktop.org/src/gst-libav/gst-libav-1.4.4.tar.xz'
+  mirror 'http://ftp.osuosl.org/pub/blfs/svn/g/gst-libav-1.4.4.tar.xz'
+  sha256 '2ec7285e5ec6731963b0955487cceb9eb04e285ca682f3ef575996c068cde8aa'
+
+  bottle do
+    sha1 "77e0e0a6e08f928fb68b491bad6d0115490e2cef" => :yosemite
+    sha1 "5b9ab2328c5c6d5970e085f816d9299252d5ffd3" => :mavericks
+    sha1 "918fd6f368ff1983e6fd8ee985f08c956f48a6cc" => :mountain_lion
+  end
 
   head do
     url 'git://anongit.freedesktop.org/gstreamer/gst-libav'
@@ -26,7 +32,7 @@ class GstLibav < Formula
     ]
 
     if build.head?
-      ENV["NOCONFIGURE"]="yes"
+      ENV["NOCONFIGURE"] = "yes"
       system "./autogen.sh"
     end
 
@@ -36,6 +42,6 @@ class GstLibav < Formula
   end
 
   test do
-    system Formula["gstreamer"].opt_prefix/"bin/gst-inspect-1.0", "libav"
+    system "#{Formula["gstreamer"].opt_bin}/gst-inspect-1.0", "libav"
   end
 end

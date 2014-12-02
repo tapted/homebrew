@@ -1,38 +1,47 @@
-require 'formula'
+require "formula"
 
 class SwiProlog < Formula
-  homepage 'http://www.swi-prolog.org/'
-  url 'http://www.swi-prolog.org/download/stable/src/pl-6.6.2.tar.gz'
-  sha1 'b893a45c910e11e703e73fb15ce55a3d3c792489'
+  homepage "http://www.swi-prolog.org/"
+  url "http://www.swi-prolog.org/download/stable/src/pl-6.6.6.tar.gz"
+  sha1 "38cc6772a48fd412f50fc06e24e6e4673eb71d3b"
+  revision 1
+
+  bottle do
+    sha1 "639b6093ff09bb6b066ff86705de2ddc78c37213" => :yosemite
+    sha1 "76f0f355cc1e16442ed3f474654924890da457dd" => :mavericks
+    sha1 "6917eab60b4e607311f0ee777dd70e31e624e7c1" => :mountain_lion
+  end
 
   devel do
-    url 'http://www.swi-prolog.org/download/devel/src/pl-7.1.9.tar.gz'
-    sha1 'ae8e6a93ac0beb57239772572211976432e91f34'
+    url "http://www.swi-prolog.org/download/devel/src/pl-7.1.26.tar.gz"
+    sha1 "68559423ad95861a7299ebf0cd5914982dc78cbe"
   end
 
   head do
-    url 'git://www.swi-prolog.org/home/pl/git/pl.git'
+    url "https://github.com/SWI-Prolog/swipl-devel.git"
 
-    depends_on :autoconf
+    depends_on "autoconf" => :build
   end
 
-  option 'lite', "Disable all packages"
-  option 'with-jpl', "Enable JPL (Java Prolog Bridge)"
-  option 'with-xpce', "Enable XPCE (Prolog Native GUI Library)"
+  option "lite", "Disable all packages"
+  option "with-jpl", "Enable JPL (Java Prolog Bridge)"
+  option "with-xpce", "Enable XPCE (Prolog Native GUI Library)"
 
-  depends_on 'readline'
-  depends_on 'gmp'
+  depends_on "pkg-config" => :build
+  depends_on "readline"
+  depends_on "gmp"
+  depends_on "openssl"
+  depends_on "libarchive" => :optional
 
   if build.with? "xpce"
-    depends_on 'pkg-config' => :build
     depends_on :x11
-    depends_on 'jpeg'
+    depends_on "jpeg"
   end
 
   # 10.5 versions of these are too old
   if MacOS.version <= :leopard
-    depends_on 'fontconfig'
-    depends_on 'expat'
+    depends_on "fontconfig"
+    depends_on "expat"
   end
 
   fails_with :llvm do
@@ -41,15 +50,24 @@ class SwiProlog < Formula
   end
 
   def install
+    # The archive package hard-codes a check for MacPort libarchive
+    # Replace this with a check for Homebrew's libarchive, or nowhere
+    if build.with? "libarchive"
+      inreplace "packages/archive/configure.in", "/opt/local",
+                                                 Formula["libarchive"].opt_prefix
+    else
+      ENV.append "DISABLE_PKGS", "archive"
+    end
+
     args = ["--prefix=#{libexec}", "--mandir=#{man}"]
-    ENV.append 'DISABLE_PKGS', "jpl" if build.without? "jpl"
-    ENV.append 'DISABLE_PKGS', "xpce" if build.without? "xpce"
+    ENV.append "DISABLE_PKGS", "jpl" if build.without? "jpl"
+    ENV.append "DISABLE_PKGS", "xpce" if build.without? "xpce"
 
     # SWI-Prolog's Makefiles don't add CPPFLAGS to the compile command, but do
     # include CIFLAGS. Setting it here. Also, they clobber CFLAGS, so including
     # the Homebrew-generated CFLAGS into COFLAGS here.
-    ENV['CIFLAGS'] = ENV.cppflags
-    ENV['COFLAGS'] = ENV.cflags
+    ENV["CIFLAGS"] = ENV.cppflags
+    ENV["COFLAGS"] = ENV.cflags
 
     # Build the packages unless --lite option specified
     args << "--with-world" unless build.include? "lite"

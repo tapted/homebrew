@@ -4,8 +4,16 @@ class Libharu < Formula
   homepage 'http://www.libharu.org'
   url 'http://libharu.org/files/libharu-2.2.1.tar.bz2'
   sha1 'bfea7d9df3fb6a112340d0d54731f62f53b26d2f'
+  revision 1
 
-  depends_on :libpng
+  bottle do
+    cellar :any
+    sha1 "38e83c295e83e290a5df03f4932b07ca8bc18707" => :yosemite
+    sha1 "22384f48ee22ae06ccf0636a86c61fa27fd26797" => :mavericks
+    sha1 "0a20c683544726d870f53c005f79a730b1effffe" => :mountain_lion
+  end
+
+  depends_on 'libpng'
 
   # Fixes compilation against LibPNG 1.5. Can be removed on next release.
   # Based on a commit in the LibHaru repository which does not apply cleanly

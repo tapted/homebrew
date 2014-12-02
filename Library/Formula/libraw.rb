@@ -5,6 +5,14 @@ class Libraw < Formula
   url 'http://www.libraw.org/data/LibRaw-0.15.4.tar.gz'
   sha1 '1561e1ac12df6eed999d5be3146d66176c050b76'
 
+  bottle do
+    cellar :any
+    revision 1
+    sha1 "7f451901d85f31ae94f315a9c89eb42660fdd61b" => :yosemite
+    sha1 "2343787be91bcb214f3806a38c1539ef8ee06ada" => :mavericks
+    sha1 "303ab92ea058626cf446efb4f0d2833b83ebe4f9" => :mountain_lion
+  end
+
   depends_on 'pkg-config' => :build
   depends_on 'jasper'
   depends_on 'little-cms2'

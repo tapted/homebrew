@@ -1,23 +1,28 @@
-require 'formula'
+require "formula"
 
 class Disco < Formula
-  homepage 'http://discoproject.org/'
-  url 'https://github.com/discoproject/disco/archive/0.5.tar.gz'
-  sha1 '2728d2cc9ea398ddf1e4420e5c75750aa74fe0e2'
-  # Periods in the install path cause disco-worker to complain so change to underscores.
-  version '0_5_0'
+  homepage "http://discoproject.org/"
+  url "https://github.com/discoproject/disco/archive/0.5.4.tar.gz"
+  sha1 "43bc8fac5d5d657a81a8d7b628d1f72f97470b6e"
 
-  depends_on :python
-  depends_on 'erlang'
-  depends_on 'simplejson' => :python if MacOS.version <= :leopard
-  depends_on 'libcmph'
-
-  def patches
-    # Modifies config for single-node operation
-    DATA
+  bottle do
+    cellar :any
+    sha1 "f1a4e9775053971dac6ab3b183ebb13d6928c050" => :yosemite
+    sha1 "286325ec178e1bd06a78127333c835a1bf5a2763" => :mavericks
+    sha1 "da6e23c51a8ca6c353e83724746f0e11dba37a99" => :mountain_lion
   end
 
+  depends_on :python if MacOS.version <= :snow_leopard
+  depends_on "erlang"
+  depends_on "simplejson" => :python if MacOS.version <= :leopard
+  depends_on "libcmph"
+
+  # Modifies config for single-node operation
+  patch :DATA
+
   def install
+    ENV["PYTHONPATH"] = lib+"python2.7/site-packages"
+
     inreplace "Makefile" do |s|
       s.change_make_var! "prefix", prefix
       s.change_make_var! "sysconfdir", etc
@@ -38,6 +43,12 @@ class Disco < Formula
     inreplace "#{etc}/disco/settings.py" do |s|
       s.gsub!("Cellar/disco/"+version+"/", "")
     end
+
+    bin.env_script_all_files(libexec+"bin", :PYTHONPATH => ENV["PYTHONPATH"])
+  end
+
+  test do
+    system "#{bin}/disco"
   end
 
   def caveats

@@ -5,15 +5,23 @@ class Libagg < Formula
   url 'http://www.antigrain.com/agg-2.5.tar.gz'
   sha1 '08f23da64da40b90184a0414369f450115cdb328'
 
-  depends_on :autoconf
-  depends_on :automake
-  depends_on :libtool
+  bottle do
+    cellar :any
+    revision 1
+    sha1 "bc541437d106b01999c703b805d50beb66ad07c0" => :yosemite
+    sha1 "5bc19c91d6f937036fa3f6cc67a6687449ad37c8" => :mavericks
+    sha1 "2db5f38b2110dd31fd1932d7ea003d7ca6ea2972" => :mountain_lion
+  end
+
+  depends_on 'autoconf' => :build
+  depends_on 'automake' => :build
+  depends_on 'libtool' => :build
   depends_on 'pkg-config' => :build
   depends_on 'sdl'
-  depends_on :freetype => :optional
+  depends_on 'freetype' => :optional
 
   # Fix build with clang; last release was in 2006
-  def patches; DATA; end
+  patch :DATA
 
   def install
     # AM_C_PROTOTYPES was removed in automake 1.12, as it's only needed for

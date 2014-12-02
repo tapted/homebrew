@@ -8,9 +8,17 @@ class Libffi < Formula
 
   bottle do
     cellar :any
+    sha1 "ab596256bb0dcd2c56ebde303dd163b58f00aa3a" => :yosemite
     sha1 "b6a9696c2a58f34f37cf2bca5a652ee6982c3c14" => :mavericks
     sha1 "421a0108078e79a1e32ccebea8eeadce0d0533db" => :mountain_lion
     sha1 "c2ad5c7f63e06566494d92baa1e31c0c2190ea05" => :lion
+  end
+
+  head do
+    url 'https://github.com/atgreen/libffi.git'
+    depends_on "autoconf" => :build
+    depends_on "automake" => :build
+    depends_on "libtool" => :build
   end
 
   keg_only :provided_by_osx, "Some formulae require a newer version of libffi."
@@ -18,6 +26,7 @@ class Libffi < Formula
   def install
     ENV.deparallelize # https://github.com/Homebrew/homebrew/pull/19267
     ENV.universal_binary
+    system "./autogen.sh" if build.head?
     system "./configure", "--disable-debug", "--disable-dependency-tracking",
                           "--prefix=#{prefix}"
     system "make install"
@@ -74,7 +83,7 @@ class Libffi < Formula
     TEST_SCRIPT
 
     flags = ["-L#{lib}", "-lffi", "-I#{lib}/libffi-#{version}/include"]
-    system ENV.cc, "-o", "closure", "closure.c", *(flags + ENV.cflags.split)
+    system ENV.cc, "-o", "closure", "closure.c", *(flags + ENV.cflags.to_s.split)
     system "./closure"
   end
 end

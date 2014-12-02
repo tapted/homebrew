@@ -2,23 +2,24 @@ require 'formula'
 
 class GdkPixbuf < Formula
   homepage 'http://gtk.org'
-  url 'http://ftp.gnome.org/pub/GNOME/sources/gdk-pixbuf/2.30/gdk-pixbuf-2.30.4.tar.xz'
-  sha256 'a13bbad0d804829b260bc901dc7d284d330c534489fc1666c126fa4555bbb051'
+  url 'http://ftp.gnome.org/pub/GNOME/sources/gdk-pixbuf/2.30/gdk-pixbuf-2.30.8.tar.xz'
+  sha256 '4853830616113db4435837992c0aebd94cbb993c44dc55063cee7f72a7bef8be'
 
   bottle do
-    sha1 "5e264d248d4893087f1e8bcc044b6977f552032f" => :mavericks
-    sha1 "08fe8e370c69bda4b2fabbbc6a2817fcd24545d9" => :mountain_lion
-    sha1 "9bb3a41fc00a096cec2bce041729c59e74bdd617" => :lion
+    revision 1
+    sha1 "fb4261dd767c0e88888ef210e7c6bf91c4e2549e" => :yosemite
+    sha1 "06dc916f0fc6018e390285cb4b882478b10417fd" => :mavericks
+    sha1 "b3e286bf4e15e8e2e522f049c8e8d9a39c5b4f36" => :mountain_lion
   end
 
   option :universal
 
-  depends_on 'pkg-config' => :build
-  depends_on 'glib'
-  depends_on 'jpeg'
-  depends_on 'libtiff'
-  depends_on :libpng
-  depends_on 'gobject-introspection'
+  depends_on "pkg-config" => :build
+  depends_on "glib"
+  depends_on "jpeg"
+  depends_on "libtiff"
+  depends_on "libpng"
+  depends_on "gobject-introspection"
 
   # 'loaders.cache' must be writable by other packages
   skip_clean 'lib/gdk-pixbuf-2.0'
@@ -33,7 +34,7 @@ class GdkPixbuf < Formula
                           "--disable-Bsymbolic",
                           "--without-gdiplus"
     system "make"
-    system "make install"
+    system "make", "install"
 
     # Other packages should use the top-level modules directory
     # rather than dumping their files into the gdk-pixbuf keg.
@@ -42,5 +43,19 @@ class GdkPixbuf < Formula
       s.change_make_var! 'gdk_pixbuf_binarydir',
         HOMEBREW_PREFIX/'lib/gdk-pixbuf-2.0'/libv
     end
+  end
+
+  def post_install
+    # Change the version directory below with any future update
+    ENV["GDK_PIXBUF_MODULEDIR"]="#{HOMEBREW_PREFIX}/lib/gdk-pixbuf-2.0/2.10.0/loaders"
+    system "#{bin}/gdk-pixbuf-query-loaders", "--update-cache"
+  end
+
+  def caveats; <<-EOS.undent
+    Programs that require this module need to set the environment variable
+      export GDK_PIXBUF_MODULEDIR="#{HOMEBREW_PREFIX}/lib/gdk-pixbuf-2.0/2.10.0/loaders"
+    If you need to manually update the query loader cache, set GDK_PIXBUF_MODULEDIR then run
+      #{bin}/gdk-pixbuf-query-loaders --update-cache
+    EOS
   end
 end

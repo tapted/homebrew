@@ -21,8 +21,6 @@ class MysqlCluster < Formula
   conflicts_with 'mysql', 'mariadb', 'percona-server',
     :because => "mysql, mariadb, and percona install the same binaries."
 
-  env :std if build.universal?
-
   fails_with :clang do
     build 500
     cause "http://article.gmane.org/gmane.comp.db.mysql.cluster/2085"
@@ -69,7 +67,10 @@ class MysqlCluster < Formula
     args << "-DWITH_BLACKHOLE_STORAGE_ENGINE=1" if build.with? "blackhole-storage-engine"
 
     # Make universal for binding to universal applications
-    args << "-DCMAKE_OSX_ARCHITECTURES='#{Hardware::CPU.universal_archs.as_cmake_arch_flags}'" if build.universal?
+    if build.universal?
+      ENV.universal_binary
+      args << "-DCMAKE_OSX_ARCHITECTURES=#{Hardware::CPU.universal_archs.as_cmake_arch_flags}"
+    end
 
     # Build with local infile loading support
     args << "-DENABLED_LOCAL_INFILE=1" if build.include? 'enable-local-infile'
@@ -85,8 +86,8 @@ class MysqlCluster < Formula
     (var+"mysql-cluster/ndb_data").mkpath
     (var+"mysql-cluster/mysqld_data").mkpath
     (var+"mysql-cluster/conf").mkpath
-    (var+"mysql-cluster/conf/my.cnf").write my_cnf unless File.exists? var+"mysql-cluster/conf/my.cnf"
-    (var+"mysql-cluster/conf/config.ini").write config_ini unless File.exists? var+"mysql-cluster/conf/config.ini"
+    (var+"mysql-cluster/conf/my.cnf").write my_cnf unless File.exist? var+"mysql-cluster/conf/my.cnf"
+    (var+"mysql-cluster/conf/config.ini").write config_ini unless File.exist? var+"mysql-cluster/conf/config.ini"
 
     plist_path('ndb_mgmd').write ndb_mgmd_startup_plist('ndb_mgmd')
     plist_path('ndb_mgmd').chmod 0644
@@ -100,14 +101,14 @@ class MysqlCluster < Formula
     rm_rf prefix+'data'
 
     # Link the setup script into bin
-    ln_s prefix+'scripts/mysql_install_db', bin+'mysql_install_db'
+    bin.install_symlink prefix/"scripts/mysql_install_db"
     # Fix up the control script and link into bin
     inreplace "#{prefix}/support-files/mysql.server" do |s|
       s.gsub!(/^(PATH=".*)(")/, "\\1:#{HOMEBREW_PREFIX}/bin\\2")
       # pidof can be replaced with pgrep from proctools on Mountain Lion
       s.gsub!(/pidof/, 'pgrep') if MacOS.version >= :mountain_lion
     end
-    ln_s "#{prefix}/support-files/mysql.server", bin
+    bin.install_symlink prefix/"support-files/mysql.server"
 
     # Move mysqlaccess to libexec
     libexec.mkpath
@@ -126,7 +127,7 @@ class MysqlCluster < Formula
 
     Set up databases to run AS YOUR USER ACCOUNT with:
       unset TMPDIR
-      mysql_install_db --verbose --user=`whoami` --basedir="$(brew --prefix mysql-cluster)" --datadir=#{var}/mysql-cluster/mysqld_data --tmpdir=/tmp
+      mysql_install_db --verbose --user=`whoami` --basedir="#{opt_prefix}" --datadir=#{var}/mysql-cluster/mysqld_data --tmpdir=/tmp
 
     For a first cluster, you may start with a single MySQL Server (mysqld),
     a pair of Data Nodes (ndbd) and a single management node (ndb_mgmd):

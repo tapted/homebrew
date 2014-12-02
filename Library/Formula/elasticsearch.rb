@@ -1,13 +1,15 @@
-require 'formula'
+require "formula"
 
 class Elasticsearch < Formula
-  homepage 'http://www.elasticsearch.org'
-  url 'https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.0.1.tar.gz'
-  sha1 '26bcf8e36576b2f3809ab84432ea005f893836b9'
+  homepage "http://www.elasticsearch.org"
+  url "https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.4.0.tar.gz"
+  sha1 "728913722bc94dad4cb5e759a362f09dc19ed6fe"
+
+  depends_on :java => "1.7"
 
   head do
-    url 'https://github.com/elasticsearch/elasticsearch.git'
-    depends_on 'maven'
+    url "https://github.com/elasticsearch/elasticsearch.git"
+    depends_on "maven"
   end
 
   def cluster_name
@@ -24,13 +26,14 @@ class Elasticsearch < Formula
 
     # Remove Windows files
     rm_f Dir["bin/*.bat"]
+    rm_f Dir["bin/*.exe"]
 
     # Move libraries to `libexec` directory
-    libexec.install Dir['lib/*.jar']
-    (libexec/'sigar').install Dir['lib/sigar/*.{jar,dylib}']
+    libexec.install Dir["lib/*.jar"]
+    (libexec/"sigar").install Dir["lib/sigar/*.{jar,dylib}"]
 
     # Install everything else into package directory
-    prefix.install Dir['*']
+    prefix.install Dir["*"]
 
     # Remove unnecessary files
     rm_f Dir["#{lib}/sigar/*"]
@@ -46,9 +49,9 @@ class Elasticsearch < Formula
       s.gsub! /#\s*cluster\.name\: elasticsearch/, "cluster.name: #{cluster_name}"
 
       # 2. Configure paths
-      s.sub! "# path.data: /path/to/data", "path.data: #{var}/elasticsearch/"
-      s.sub! "# path.logs: /path/to/logs", "path.logs: #{var}/log/elasticsearch/"
-      s.sub! "# path.plugins: /path/to/plugins", "path.plugins: #{var}/lib/elasticsearch/plugins"
+      s.sub! /#\s*path\.data: \/path\/to.+$/, "path.data: #{var}/elasticsearch/"
+      s.sub! /#\s*path\.logs: \/path\/to.+$/, "path.logs: #{var}/log/elasticsearch/"
+      s.sub! /#\s*path\.plugins: \/path\/to.+$/, "path.plugins: #{var}/lib/elasticsearch/plugins"
 
       # 3. Bind to loopback IP for laptops roaming different networks
       s.gsub! /#\s*network\.host\: [^\n]+/, "network.host: 127.0.0.1"

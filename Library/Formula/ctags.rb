@@ -6,14 +6,12 @@ class Ctags < Formula
   sha1 '482da1ecd182ab39bbdc09f2f02c9fba8cd20030'
 
   head do
-    url 'https://ctags.svn.sourceforge.net/svnroot/ctags/trunk'
+    url 'https://svn.code.sf.net/p/ctags/code/trunk'
     depends_on :autoconf
   end
 
   # fixes http://sourceforge.net/tracker/?func=detail&aid=3247256&group_id=6556&atid=106556
-  def patches
-    { :p2 => DATA }
-  end
+  patch :p2, :DATA
 
   def install
     if build.head?

@@ -9,17 +9,23 @@ require 'formula'
 # Please see https://github.com/Homebrew/homebrew/pull/22043 for more info
 class Jack < Formula
   homepage 'http://jackaudio.org'
-  url 'http://jackaudio.org/downloads/jack-audio-connection-kit-0.121.3.tar.gz'
-  sha1 '7d6e2219660222d1512ee704dd88a534b3e3089e'
+  url "http://jackaudio.org/downloads/jack-audio-connection-kit-0.124.1.tar.gz"
+  sha1 "e9ba4a4c754ec95fbe653dcf7344edd6cc47cd60"
 
+  bottle do
+    revision 1
+    sha1 "77d0ff244fa183a4f520498229b7c3263b6d099d" => :yosemite
+    sha1 "5ba1cd3b59da76cbec24b2ce8cfafb920934b5e7" => :mavericks
+    sha1 "01f34e585df06210bfc2f06d07d1ef7058d17f67" => :mountain_lion
+  end
+
+  depends_on 'berkeley-db'
   depends_on 'celt'
   depends_on 'libsndfile'
   depends_on 'libsamplerate'
 
-  def patches
-    # Change pThread header include from CarbonCore
-    { :p0 => DATA }
-  end if MacOS.version >= :mountain_lion
+  # Change pThread header include from CarbonCore
+  patch :p0, :DATA if MacOS.version >= :mountain_lion
 
   plist_options :manual => "jackd -d coreaudio"
 

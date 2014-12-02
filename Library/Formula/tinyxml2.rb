@@ -2,15 +2,15 @@ require "formula"
 
 class Tinyxml2 < Formula
   homepage "http://grinninglizard.com/tinyxml2"
-  url "https://github.com/leethomason/tinyxml2/archive/2.0.2.tar.gz"
-  sha1 "c78a4de58540e2a35f4775fd3e577299ebd15117"
+  url "https://github.com/leethomason/tinyxml2/archive/2.2.0.tar.gz"
+  sha1 "7869aa08241ce16f93ba3732c1cde155b1f2b6a0"
   head "https://github.com/leethomason/tinyxml2.git", :branch => "master"
 
   bottle do
     cellar :any
-    sha1 "21ac26ad280788da33d3d40b85c51443b8e621bb" => :mavericks
-    sha1 "796b13f7e196897af63cd41e149bea133774a61f" => :mountain_lion
-    sha1 "623579a7a5216e1789f2ef97c6048ccbf349f99b" => :lion
+    sha1 "1a5b0decafe9a001614724bfc10652901ef6689f" => :mavericks
+    sha1 "9ee5af184fc7eff9938387d563de7b7d31c24632" => :mountain_lion
+    sha1 "80d5625994120b1146376ef2978c416cd011e96c" => :lion
   end
 
   depends_on "cmake" => :build
@@ -28,6 +28,7 @@ class Tinyxml2 < Formula
         return 0;
       }
     EOS
-    system ENV.cc, "test.cpp", "-ltinyxml2"
+    system ENV.cc, "test.cpp", "-ltinyxml2", "-o", "test"
+    system "./test"
   end
 end

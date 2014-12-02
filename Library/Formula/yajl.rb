@@ -2,13 +2,15 @@ require 'formula'
 
 class Yajl < Formula
   homepage 'http://lloyd.github.io/yajl/'
-  url 'https://github.com/lloyd/yajl/archive/2.0.4.tar.gz'
-  sha256 '0e78f516dc53ecce7dc073f9a9bb0343186b58ef29dcd1dad74e5e853b216dd5'
+  url 'https://github.com/lloyd/yajl/archive/2.1.0.tar.gz'
+  sha256 '3fb73364a5a30efe615046d07e6db9d09fd2b41c763c5f7d3bfb121cd5c5ac5a'
 
   bottle do
-    sha1 "a02d27cc6b98912176bd636ee30aaca464a44ae8" => :mavericks
-    sha1 "1d8cec340ef78502d9e726a96c416c20ee7e85e1" => :mountain_lion
-    sha1 "1e7bbbf4f37b9a251c430b2438f3449cc62d5903" => :lion
+    cellar :any
+    revision 3
+    sha1 "3365b3fd3e47023adf9aacdff66dd5570bddb124" => :yosemite
+    sha1 "ba8a07a67cc0c8b4f6ea92f7dc7ef3008fdf222f" => :mavericks
+    sha1 "1017b9a117f55464eac2eb254e0d8aa9e181b5c9" => :mountain_lion
   end
 
   # Configure uses cmake internally
@@ -17,14 +19,13 @@ class Yajl < Formula
   def install
     ENV.deparallelize
 
-    system "./configure", "--prefix=#{prefix}"
+    system "cmake", ".", *std_cmake_args
     system "make install"
     (include/'yajl').install Dir['src/api/*.h']
   end
 
   test do
-    output = `echo "[0,1,2,3]" | '#{bin}/json_verify'`
-    assert $?.success?
-    assert_match /valid/i, output.strip
+    output = pipe_output("#{bin}/json_verify", "[0,1,2,3]").strip
+    assert_equal "JSON is valid", output
   end
 end

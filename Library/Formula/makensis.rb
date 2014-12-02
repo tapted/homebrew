@@ -10,7 +10,7 @@ class Makensis < Formula
   # scons appears to have no builtin way to override the compiler selection,
   # and the only options supported on OS X are 'gcc' and 'g++'.
   # Use the right compiler by forcibly altering the scons config to set these
-  def patches; DATA; end
+  patch :DATA
 
   resource 'nsis' do
     url 'https://downloads.sourceforge.net/project/nsis/NSIS%202/2.46/nsis-2.46.zip'
@@ -23,7 +23,8 @@ class Makensis < Formula
     # https://sourceforge.net/p/nsis/bugs/1085/
     ENV.libstdcxx if ENV.compiler == :clang
 
-    scons "makensis"
+    # Don't strip, see https://github.com/Homebrew/homebrew/issues/28718
+    scons "STRIP=0", "makensis"
     bin.install "build/release/makensis/makensis"
     (share/'nsis').install resource('nsis')
   end

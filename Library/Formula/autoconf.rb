@@ -8,14 +8,13 @@ class Autoconf < Formula
 
   bottle do
     revision 1
+    sha1 "3f83cb206720445748c0c4851152607bfabaa926" => :yosemite
     sha1 "319a4ac05d83b5b3db37dcc629a46a412ec1989b" => :mavericks
     sha1 "83184a596d69f3a868e6780c1c8fba309ea28fb2" => :mountain_lion
     sha1 "7d31f63e5ddd1bbbf0397b0b70df1ff9e70f998b" => :lion
   end
 
-  if MacOS::Xcode.provides_autotools? or File.file? "/usr/bin/autoconf"
-    keg_only "Xcode (up to and including 4.2) provides (a rather old) Autoconf."
-  end
+  keg_only :provided_until_xcode43
 
   def install
     ENV['PERL'] = '/usr/bin/perl'

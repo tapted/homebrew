@@ -15,16 +15,14 @@ class Minbif < Formula
   depends_on 'cmake' => :build
   depends_on 'glib'
   depends_on 'gettext'
-  depends_on 'finch'
+  depends_on 'pidgin'
   depends_on 'gnutls'
   depends_on 'imlib2' => :optional
   depends_on 'libcaca' => :optional
 
   # Problem:  Apple doesn't have <security/pam_misc.h> so don't ask for it.
   # Reported: https://symlink.me/issues/917
-  def patches
-    DATA
-  end if build.include? 'pam'
+  patch :DATA if build.include? 'pam'
 
   def install
     inreplace "minbif.conf" do |s|

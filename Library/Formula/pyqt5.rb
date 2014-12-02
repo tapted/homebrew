@@ -1,11 +1,12 @@
 require 'formula'
 
 class Pyqt5 < Formula
-  homepage 'http://www.riverbankcomputing.co.uk/software/pyqt/download5'
-  url 'https://downloads.sf.net/project/pyqt/PyQt5/PyQt-5.2/PyQt-gpl-5.2.tar.gz'
-  sha1 'a1c232d34ab268587c127ad3097c725ee1a70cf0'
+  homepage "http://www.riverbankcomputing.co.uk/software/pyqt/download5"
+  url "https://downloads.sf.net/project/pyqt/PyQt5/PyQt-5.3.2/PyQt-gpl-5.3.2.tar.gz"
+  sha1 "bb34d826a50b0735d1319dc51be6a094ba64b800"
 
   option 'enable-debug', "Build with debug symbols"
+  option 'with-docs', "Install HTML documentation and python examples"
 
   depends_on :python3 => :recommended
   depends_on :python => :optional
@@ -23,6 +24,8 @@ class Pyqt5 < Formula
   end
 
   def install
+    # addresses https://github.com/Homebrew/homebrew/issues/32370
+    inreplace "configure.py", "qmake_QT=['webkitwidgets']", "qmake_QT=['webkitwidgets', 'printsupport']"
     Language::Python.each_python(build) do |python, version|
       args = [ "--confirm-license",
                "--bindir=#{bin}",
@@ -35,7 +38,8 @@ class Pyqt5 < Formula
                # If qt4 is linked it will pickup that version otherwise.
                "--qmake=#{Formula["qt5"].bin}/qmake",
                # Force deployment target to avoid libc++ issues
-               "QMAKE_MACOSX_DEPLOYMENT_TARGET=#{MacOS.version}" ]
+               "QMAKE_MACOSX_DEPLOYMENT_TARGET=#{MacOS.version}",
+               "--verbose"]
       args << '--debug' if build.include? 'enable-debug'
 
       system python, "configure.py", *args
@@ -43,6 +47,7 @@ class Pyqt5 < Formula
       system "make", "install"
       system "make", "clean"
     end
+    doc.install 'doc/html', 'examples' if build.with? "docs"
   end
 
   test do

@@ -4,23 +4,25 @@ class Gd < Formula
   homepage 'http://libgd.bitbucket.org/'
   url 'https://bitbucket.org/libgd/gd-libgd/downloads/libgd-2.1.0.tar.gz'
   sha1 'a0f3053724403aef9e126f4aa5c662573e5836cd'
+  revision 2
 
   bottle do
     cellar :any
-    sha1 "87bbfcde2e61c0a0ba04fd6e23fd5b74abae254a" => :mavericks
-    sha1 "91e5c6ed43c2118dca085f5615dde950bbc5fa56" => :mountain_lion
-    sha1 "9c3e0d5b7256a6404e728ea4e10d720d8eb2fab5" => :lion
+    revision 1
+    sha1 "370029d382be7ea5c8d5975f20b7668eced29f9c" => :yosemite
+    sha1 "e183bfd8da0354da3e0b046f2d092b099f4c6356" => :mavericks
+    sha1 "8fee5a15e1ed1331c52d9a286431fdd1b56c126e" => :mountain_lion
   end
 
   head 'https://bitbucket.org/libgd/gd-libgd', :using => :hg
 
   option :universal
 
-  depends_on :libpng => :recommended
+  depends_on 'libpng' => :recommended
   depends_on 'jpeg' => :recommended
-  depends_on :fontconfig => :optional
-  depends_on :freetype => :optional
-  depends_on 'libtiff' => :optional
+  depends_on 'fontconfig' => :recommended
+  depends_on 'freetype' => :recommended
+  depends_on 'libtiff' => :recommended
   depends_on 'libvpx' => :optional
 
   fails_with :llvm do
@@ -73,7 +75,7 @@ class Gd < Formula
   end
 
   test do
-    system "#{bin}/pngtogd", "/usr/share/doc/cups/images/cups.png", "gd_test.gd"
+    system "#{bin}/pngtogd", test_fixtures("test.png"), "gd_test.gd"
     system "#{bin}/gdtopng", "gd_test.gd", "gd_test.png"
   end
 end

@@ -1,105 +1,119 @@
-require 'formula'
-
-class NpmRequirement < Requirement
-  fatal true
-
-  def modules_folder
-    "#{HOMEBREW_PREFIX}/lib/node_modules"
-  end
-
-  def message; <<-EOS.undent
-    Beginning with 0.8.0, this recipe now comes with npm.
-    It appears you already have npm installed at #{modules_folder}/npm.
-    To use the npm that comes with this recipe, first uninstall npm with
-    `npm uninstall npm -g`, then run this command again.
-
-    If you would like to keep your installation of npm instead of
-    using the one provided with homebrew, install the formula with
-    the `--without-npm` option.
-    EOS
-  end
-
-  satisfy :build_env => false do
-    begin
-      path = Pathname.new("#{modules_folder}/npm/bin/npm")
-      path.realpath.to_s.include?(HOMEBREW_CELLAR)
-    rescue Errno::ENOENT
-      true
-    end
-  end
-end
+require "formula"
 
 # Note that x.even are stable releases, x.odd are devel releases
 class Node < Formula
-  homepage 'http://nodejs.org/'
-  url 'http://nodejs.org/dist/v0.10.26/node-v0.10.26.tar.gz'
-  sha1 '2340ec2dce1794f1ca1c685b56840dd515a271b2'
+  homepage "http://nodejs.org/"
+  url "http://nodejs.org/dist/v0.10.33/node-v0.10.33.tar.gz"
+  sha256 "75dc26c33144e6d0dc91cb0d68aaf0570ed0a7e4b0c35f3a7a726b500edd081e"
+  revision 1
 
-  devel do
-    url 'http://nodejs.org/dist/v0.11.12/node-v0.11.12.tar.gz'
-    sha1 'd991057af05dd70feb2126469ce279a2fe869e86'
+  bottle do
+    revision 9
+    sha1 "c9d4bffeae1a6996715efcde907f98bab1f7bd57" => :yosemite
+    sha1 "a75fd66670c781b0b8248c5000e652bc20dcb924" => :mavericks
+    sha1 "5db55f05590a23149b1459d522075b8b2facee79" => :mountain_lion
   end
 
-  head 'https://github.com/joyent/node.git'
+  head do
+    url "https://github.com/joyent/node.git", :branch => "v0.12"
 
-  option 'enable-debug', 'Build with debugger hooks'
-  option 'without-npm', 'npm will not be installed'
-  option 'without-completion', 'npm bash completion will not be installed'
+    depends_on "pkg-config" => :build
+    depends_on "icu4c"
+  end
 
-  depends_on NpmRequirement => :recommended
-  depends_on :python
+  deprecated_option "enable-debug" => "with-debug"
+
+  option "with-debug", "Build with debugger hooks"
+  option "without-npm", "npm will not be installed"
+  option "without-completion", "npm bash completion will not be installed"
+
+  depends_on :python => :build
+
+  # Once we kill off SSLv3 in our OpenSSL consider forcing our OpenSSL
+  # over Node's shipped version with --shared-openssl.
+  # Would allow us quicker security fixes than Node's release schedule.
+  # See https://github.com/joyent/node/issues/3557 for prior discussion.
 
   fails_with :llvm do
     build 2326
   end
 
-  def install
-    args = %W{--prefix=#{prefix}}
-
-    args << "--debug" if build.include? 'enable-debug'
-    args << "--without-npm" if build.without? "npm"
-
-    system "./configure", *args
-    system "make install"
-
-    if build.with? "npm"
-      (lib/"node_modules/npm/npmrc").write("prefix = #{npm_prefix}\n")
-
-      # Link npm manpages
-      Pathname.glob("#{lib}/node_modules/npm/man/*").each do |man|
-        dir = send(man.basename)
-        man.children.each do |file|
-          dir.install_symlink(file.relative_path_from(dir))
-        end
-      end
-
-      if build.with? "completion"
-        bash_completion.install_symlink \
-          lib/"node_modules/npm/lib/utils/completion.sh" => "npm"
-      end
-    end
+  resource "npm" do
+    url "https://registry.npmjs.org/npm/-/npm-2.1.10.tgz"
+    sha1 "a571ae408ac1b5e515f6c34c033503a7bb828cb4"
   end
 
-  def npm_prefix
-    d = "#{HOMEBREW_PREFIX}/share/npm"
-    if File.directory? d
-      d
-    else
-      HOMEBREW_PREFIX.to_s
+  def install
+    args = %W{--prefix=#{prefix} --without-npm}
+    args << "--debug" if build.with? "debug"
+    args << "--without-ssl2" << "--without-ssl3" if build.stable?
+
+    # This should eventually be able to use the system icu4c, but right now
+    # it expects to find this dependency using pkgconfig.
+    if build.head?
+      ENV.prepend_path "PKG_CONFIG_PATH", "#{Formula["icu4c"].opt_prefix}/lib/pkgconfig"
+      args << "--with-intl=system-icu"
+    end
+
+    system "./configure", *args
+    system "make", "install"
+
+    resource("npm").stage libexec/"npm" if build.with? "npm"
+  end
+
+  def post_install
+    return if build.without? "npm"
+
+    (libexec/"npm").cd { system "make", "uninstall" }
+    Pathname.glob(HOMEBREW_PREFIX/"share/man/*") do |man|
+      next unless man.directory?
+      man.children.each do |file|
+        next unless file.symlink?
+        file.unlink if file.readlink.to_s.include? "/node_modules/npm/man/"
+      end
+    end
+
+    node_modules = HOMEBREW_PREFIX/"lib/node_modules"
+    node_modules.mkpath
+    cp_r libexec/"npm", node_modules
+
+    npm_root = node_modules/"npm"
+    npmrc = npm_root/"npmrc"
+    npmrc.atomic_write("prefix = #{HOMEBREW_PREFIX}\n")
+
+    # set log level temporarily for npm's `make install`
+    ENV["NPM_CONFIG_LOGLEVEL"] = "verbose"
+
+    # make sure npm can find node
+    ENV["PATH"] = "#{opt_bin}:#{ENV["PATH"]}"
+
+    ENV["NPM_CONFIG_USERCONFIG"] = npmrc
+    npm_root.cd { system "make", "install" }
+
+    if build.with? "completion"
+      bash_completion.install_symlink \
+        npm_root/"lib/utils/completion.sh" => "npm"
     end
   end
 
   def caveats
-    if build.without? "npm"; <<-end.undent
-      Homebrew has NOT installed npm. If you later install it, you should supplement
-      your NODE_PATH with the npm module folder:
-          #{npm_prefix}/lib/node_modules
-      end
-    elsif not ENV['PATH'].split(':').include? "#{npm_prefix}/bin"; <<-end.undent
-      Probably you should amend your PATH to include npm-installed binaries:
-          #{npm_prefix}/bin
-      end
+    s = ""
+
+    if build.with? "npm"
+      s += <<-EOS.undent
+        If you update npm itself, do NOT use the npm update command.
+        The upstream-recommended way to update npm is:
+          npm install -g npm@latest
+      EOS
+    else
+      s += <<-EOS.undent
+        Homebrew has NOT installed npm. If you later install it, you should supplement
+        your NODE_PATH with the npm module folder:
+          #{HOMEBREW_PREFIX}/lib/node_modules
+      EOS
     end
+
+    s
   end
 
   test do
@@ -109,5 +123,14 @@ class Node < Formula
     output = `#{bin}/node #{path}`.strip
     assert_equal "hello", output
     assert_equal 0, $?.exitstatus
+
+    if build.with? "npm"
+      # make sure npm can find node
+      ENV.prepend_path "PATH", opt_bin
+      assert_equal which("node"), opt_bin/"node"
+      assert (HOMEBREW_PREFIX/"bin/npm").exist?, "npm must exist"
+      assert (HOMEBREW_PREFIX/"bin/npm").executable?, "npm must be executable"
+      system "#{HOMEBREW_PREFIX}/bin/npm", "--verbose", "install", "npm@latest"
+    end
   end
 end
